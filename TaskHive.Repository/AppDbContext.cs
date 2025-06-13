@@ -59,6 +59,9 @@ namespace TaskHive.Repository
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<UserSkill> UserSkills => Set<UserSkill>();
 
+        public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
+
+
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -277,6 +280,30 @@ namespace TaskHive.Repository
 
 
             // Nếu bạn còn mapping nào khác, cứ thêm ở đây…
+
+
+            modelBuilder.Entity<EmailVerificationToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Token)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.Email)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.HasIndex(e => e.Token)
+                    .IsUnique();
+
+                entity.HasIndex(e => new { e.UserId, e.Email });
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

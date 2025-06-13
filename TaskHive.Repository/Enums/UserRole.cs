@@ -9,7 +9,7 @@ namespace TaskHive.Repository.Enums
     public enum UserRole
     {
         Freelancer = 0,
-        Employer = 1,
+        Client = 1,
         Admin = 2
     }
 }

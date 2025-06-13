@@ -25,6 +25,32 @@ namespace TaskHive.Repository.Repositories.UserRepository
 
         public async Task<bool> ExistsByEmailAsync(string email) =>
             await _context.Users.AnyAsync(u => u.Email == email);
+
+        public async Task<User?> GetByGoogleIdAsync(string googleId) =>
+            await _context.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
+
+        public async Task<User?> GetByIdAsync(int userId) =>
+            await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+
+        public async Task UpdateAsync(User user)
+        {
+            user.UpdatedAt = DateTime.UtcNow;
+            _context.Users.Update(user);
+        }
+
+        public async Task AddFreelancerAsync(Freelancer freelancer) =>
+            await _context.Set<Freelancer>().AddAsync(freelancer);
+
+        public async Task AddClientAsync(Client client) =>
+            await _context.Set<Client>().AddAsync(client);
+
+        public async Task<Freelancer?> GetFreelancerByIdAsync(int userId) =>
+            await _context.Set<Freelancer>()
+                .Include(f => f.UserSkills)
+                .FirstOrDefaultAsync(f => f.UserId == userId);
+
+        public async Task<Client?> GetClientByIdAsync(int userId) =>
+            await _context.Set<Client>().FirstOrDefaultAsync(c => c.UserId == userId);
     }
 
 }

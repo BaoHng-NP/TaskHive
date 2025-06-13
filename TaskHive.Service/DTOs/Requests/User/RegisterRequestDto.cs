@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TaskHive.Service.DTOs.Requests.User
 {
-    public class RegisterRequestDto 
+    public class RegisterRequestDto
     {
         [Required]
         [EmailAddress]
@@ -18,5 +18,8 @@ namespace TaskHive.Service.DTOs.Requests.User
 
         [Required]
         public string FullName { get; set; } = null!;
+        
+        [Required]
+        public string Country { get; set; } = null!;
     }
 }
