@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TaskHive.Repository;
 
@@ -11,9 +12,11 @@ using TaskHive.Repository;
 namespace TaskHive.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250607171129_AddCountryToUser")]
+    partial class AddCountryToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -168,49 +171,6 @@ namespace TaskHive.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ConversationMembers");
-                });
-
-            modelBuilder.Entity("TaskHive.Repository.Entities.EmailVerificationToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsPasswordReset")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsUsed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "Email");
-
-                    b.ToTable("EmailVerificationTokens");
                 });
 
             modelBuilder.Entity("TaskHive.Repository.Entities.JobPost", b =>
@@ -391,41 +351,6 @@ namespace TaskHive.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Payments");
-                });
-
-            modelBuilder.Entity("TaskHive.Repository.Entities.RefreshToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRevoked")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("UserId", "IsRevoked");
-
-                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("TaskHive.Repository.Entities.Review", b =>
@@ -709,17 +634,6 @@ namespace TaskHive.Repository.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TaskHive.Repository.Entities.EmailVerificationToken", b =>
-                {
-                    b.HasOne("TaskHive.Repository.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("TaskHive.Repository.Entities.JobPost", b =>
                 {
                     b.HasOne("TaskHive.Repository.Entities.Category", "Category")
@@ -779,17 +693,6 @@ namespace TaskHive.Repository.Migrations
                     b.Navigation("Membership");
 
                     b.Navigation("SlotPurchase");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("TaskHive.Repository.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("TaskHive.Repository.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("User");
                 });

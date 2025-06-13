@@ -12,6 +12,14 @@ namespace TaskHive.Repository.Repositories.UserRepository
         Task<User?> GetByEmailAsync(string email);
         Task AddAsync(User user);
         Task<bool> ExistsByEmailAsync(string email);
+        Task<User?> GetByGoogleIdAsync(string googleId);
+        Task<User?> GetByIdAsync(int userId);
+        Task UpdateAsync(User user);
+
+        Task AddFreelancerAsync(Freelancer freelancer);
+        Task AddClientAsync(Client client);
+        Task<Freelancer?> GetFreelancerByIdAsync(int userId);
+        Task<Client?> GetClientByIdAsync(int userId);
     }
 
 }
