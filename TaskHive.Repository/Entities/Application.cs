@@ -36,5 +36,6 @@ namespace TaskHive.Repository.Entities
         public DateTime AppliedAt { get; set; }
 
         public bool IsDeleted { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 }

@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TaskHive.Repository\TaskHive.Repository.csproj" />
+    <PackageReference Include="AutoMapper" Version="14.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\Responses\" />
+    <ProjectReference Include="..\TaskHive.Repository\TaskHive.Repository.csproj" />
   </ItemGroup>
 
   <ItemGroup>

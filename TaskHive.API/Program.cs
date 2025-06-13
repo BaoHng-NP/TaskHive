@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using TaskHive.API;
 using TaskHive.Repository;
+using TaskHive.Service.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddApplicationServices();
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
 
 builder.Services.AddAuthentication(options =>
