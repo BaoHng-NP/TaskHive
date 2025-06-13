@@ -13,7 +13,6 @@ namespace TaskHive.Service.DTOs.Requests.User
         [Required]
         public string Role { get; set; } = null!; 
 
-        [Url]
         public string? PortfolioUrl { get; set; }
 
         public List<int>? SkillIds { get; set; }

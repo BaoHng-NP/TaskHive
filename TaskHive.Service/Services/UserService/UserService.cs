@@ -116,7 +116,6 @@ namespace TaskHive.Service.Services.UserService
                 };
 
                 await _unitOfWork.Users.AddFreelancerAsync(freelancer);
-                await _unitOfWork.SaveChangesAsync();
 
                 if (model.SkillIds?.Any() == true)
                 {
@@ -129,8 +128,8 @@ namespace TaskHive.Service.Services.UserService
                         };
                         await _unitOfWork.UserSkills.AddAsync(userSkill);
                     }
-                    await _unitOfWork.SaveChangesAsync();
                 }
+                await _unitOfWork.SaveChangesAsync();
 
                 await SendVerificationEmailAsync(freelancer);
 
@@ -323,11 +322,11 @@ namespace TaskHive.Service.Services.UserService
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow,
                         PasswordHash = null,
-                        RemainingSlots = 3
+                        RemainingSlots = 0
                     };
 
                     await _unitOfWork.Users.AddFreelancerAsync(freelancer);
-                    await _unitOfWork.SaveChangesAsync();
+
 
                     if (model.SkillIds?.Any() == true)
                     {
@@ -340,8 +339,8 @@ namespace TaskHive.Service.Services.UserService
                             };
                             await _unitOfWork.UserSkills.AddAsync(userSkill);
                         }
-                        await _unitOfWork.SaveChangesAsync();
                     }
+                    await _unitOfWork.SaveChangesAsync();
 
                     newUser = freelancer;
                 }

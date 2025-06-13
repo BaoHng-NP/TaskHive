@@ -26,8 +26,7 @@ namespace TaskHive.Repository.Entities
         [Required]
         public string FullName { get; set; } = null!;
 
-        [Required]
-        public string Country { get; set; } = null!;
+        public string? Country { get; set; } 
 
         public UserRole Role { get; set; } = UserRole.Freelancer;
 
