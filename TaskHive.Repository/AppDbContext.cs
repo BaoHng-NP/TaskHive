@@ -58,6 +58,7 @@ namespace TaskHive.Repository
         public DbSet<SlotPurchase> SlotPurchases => Set<SlotPurchase>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<UserSkill> UserSkills => Set<UserSkill>();
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
 
@@ -303,6 +304,20 @@ namespace TaskHive.Repository
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // RefreshToken configuration
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Token).IsRequired().HasMaxLength(255);
+                entity.HasIndex(e => e.Token).IsUnique();
+                entity.HasIndex(e => new { e.UserId, e.IsRevoked });
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

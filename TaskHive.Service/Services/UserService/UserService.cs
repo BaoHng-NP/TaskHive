@@ -13,7 +13,6 @@ using TaskHive.Service.DTOs.Responses;
 using Google.Apis.Auth;
 using TaskHive.Service.Services.EmailService;
 
-
 namespace TaskHive.Service.Services.UserService
 {
     public class UserService : IUserService
@@ -29,87 +28,173 @@ namespace TaskHive.Service.Services.UserService
             _emailService = emailService;
         }
 
-        private string HashPassword(string password)
+        // Generate refresh token
+        private string GenerateRefreshToken()
         {
-            using var sha256 = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
+            var randomBytes = new byte[32];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomBytes);
+            return Convert.ToBase64String(randomBytes);
         }
 
-        private bool VerifyPassword(string enteredPassword, string hashedPassword)
+        // Create AuthResponse without User info
+        private async Task<AuthResponseDto> CreateAuthResponseAsync(User user)
         {
-            string hashedEnteredPassword = HashPassword(enteredPassword);
-            return hashedEnteredPassword == hashedPassword;
-        }
+            var accessToken = GenerateJwtToken(user);
+            var refreshToken = GenerateRefreshToken();
 
-        public async Task<(AuthResponseDto? authResponse, string? errorMessage)> RegisterAsync(RegisterRequestDto model)
-        {
-            if (await _unitOfWork.Users.ExistsByEmailAsync(model.Email))
-            {
-                return (null, "Email already exists.");
-            }
-
-            var user = new User
-            {
-                Email = model.Email,
-                FullName = model.FullName,
-                PasswordHash = HashPassword(model.Password),
-                Role = Repository.Enums.UserRole.Freelancer,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsEmailVerified = false
-            };
-
-            await _unitOfWork.Users.AddAsync(user);
-            await _unitOfWork.SaveChangesAsync();
-
-            return (new AuthResponseDto
+            // Save refresh token to database
+            var refreshTokenEntity = new RefreshToken
             {
                 UserId = user.UserId,
-                Email = user.Email,
-                FullName = user.FullName,
-                Role = user.Role.ToString(),
-                ImageUrl = user.imageUrl,
-                Token = GenerateJwtToken(user),
-                Message = "Registration successful!"
-            }, null);
+                Token = refreshToken,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7) 
+            };
+
+            await _unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(30), 
+                Message = "Authentication successful!"
+            };
         }
 
         public async Task<(AuthResponseDto? authResponse, string? errorMessage)> LoginAsync(LoginRequestDto model)
         {
-            var user = await _unitOfWork.Users.GetByEmailAsync(model.Email);
-
-            if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !VerifyPassword(model.Password, user.PasswordHash))
+            try
             {
-                return (null, "Invalid email or password.");
+                var user = await _unitOfWork.Users.GetByEmailAsync(model.Email);
+
+                if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !VerifyPassword(model.Password, user.PasswordHash))
+                {
+                    return (null, "Invalid email or password.");
+                }
+
+                if (!user.IsEmailVerified)
+                {
+                    return (null, "Please verify your email before logging in.");
+                }
+
+                var authResponse = await CreateAuthResponseAsync(user);
+                authResponse.Message = "Login successful!";
+
+                return (authResponse, null);
             }
-
-            var token = GenerateJwtToken(user);
-            return (new AuthResponseDto
+            catch (Exception ex)
             {
-                Token = token,
-                UserId = user.UserId,
-                Email = user.Email,
-                FullName = user.FullName,
-                Role = user.Role.ToString(),
-                ImageUrl = user.imageUrl,
-                Message = "Login successful!"
-            }, null);
+                Console.WriteLine($"Login failed: {ex.Message}");
+                return (null, "Login failed. Please try again.");
+            }
+        }
+
+        public async Task<(AuthResponseDto? authResponse, string? errorMessage)> RegisterFreelancerAsync(FreelancerRegisterRequestDto model)
+        {
+            try
+            {
+                if (await _unitOfWork.Users.ExistsByEmailAsync(model.Email))
+                {
+                    return (null, "Email already exists.");
+                }
+
+                var freelancer = new Freelancer
+                {
+                    Email = model.Email,
+                    FullName = model.FullName,
+                    Country = model.Country,
+                    PasswordHash = HashPassword(model.Password),
+                    PortfolioUrl = model.PortfolioUrl,
+                    Role = Repository.Enums.UserRole.Freelancer,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsEmailVerified = false,
+                    RemainingSlots = 0
+                };
+
+                await _unitOfWork.Users.AddFreelancerAsync(freelancer);
+                await _unitOfWork.SaveChangesAsync();
+
+                if (model.SkillIds?.Any() == true)
+                {
+                    foreach (var categoryId in model.SkillIds)
+                    {
+                        var userSkill = new UserSkill
+                        {
+                            UserId = freelancer.UserId,
+                            CategoryId = categoryId,
+                        };
+                        await _unitOfWork.UserSkills.AddAsync(userSkill);
+                    }
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                await SendVerificationEmailAsync(freelancer);
+
+                var authResponse = await CreateAuthResponseAsync(freelancer);
+                authResponse.Message = "Registration successful! Please check your email to verify your account.";
+
+                return (authResponse, null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Freelancer registration failed: {ex.Message}");
+                return (null, "Registration failed. Please try again.");
+            }
+        }
+
+        public async Task<(AuthResponseDto? authResponse, string? errorMessage)> RegisterClientAsync(ClientRegisterRequestDto model)
+        {
+            try
+            {
+                if (await _unitOfWork.Users.ExistsByEmailAsync(model.Email))
+                {
+                    return (null, "Email already exists.");
+                }
+
+                var client = new Client
+                {
+                    Email = model.Email,
+                    FullName = model.FullName,
+                    Country = model.Country,
+                    PasswordHash = HashPassword(model.Password),
+                    Role = Repository.Enums.UserRole.Client,
+                    CompanyName = "",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsEmailVerified = false
+                };
+
+                await _unitOfWork.Users.AddClientAsync(client);
+                await _unitOfWork.SaveChangesAsync();
+
+                await SendVerificationEmailAsync(client);
+
+                var authResponse = await CreateAuthResponseAsync(client);
+                authResponse.Message = "Registration successful! Please check your email to verify your account.";
+
+                return (authResponse, null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Client registration failed: {ex.Message}");
+                return (null, "Registration failed. Please try again.");
+            }
         }
 
         public async Task<(AuthResponseDto? authResponse, string? errorMessage)> GoogleLoginAsync(GoogleLoginRequestDto model)
         {
             try
             {
-                // Lấy Google Client ID từ configuration 
                 var googleClientId = _configuration["Authentication:Google:ClientId"];
                 if (string.IsNullOrEmpty(googleClientId))
                 {
                     return (null, "Google Client ID is not configured.");
                 }
 
-                // Verify Google ID Token
                 var payload = await GoogleJsonWebSignature.ValidateAsync(model.IdToken, new GoogleJsonWebSignature.ValidationSettings()
                 {
                     Audience = new[] { googleClientId }
@@ -120,12 +205,11 @@ namespace TaskHive.Service.Services.UserService
                     return (null, "Invalid Google token.");
                 }
 
-                // Kiểm tra user đã tồn tại 
+                // Check existing user by Google ID
                 var existingUserByGoogleId = await _unitOfWork.Users.GetByGoogleIdAsync(payload.Subject);
 
                 if (existingUserByGoogleId != null)
                 {
-                    // User đã tồn tại với Google ID, cập nhật thông tin và trả về token
                     existingUserByGoogleId.FullName = payload.Name;
                     existingUserByGoogleId.imageUrl = payload.Picture;
                     existingUserByGoogleId.IsEmailVerified = payload.EmailVerified;
@@ -134,47 +218,33 @@ namespace TaskHive.Service.Services.UserService
                     await _unitOfWork.Users.UpdateAsync(existingUserByGoogleId);
                     await _unitOfWork.SaveChangesAsync();
 
-                    var token = GenerateJwtToken(existingUserByGoogleId);
-                    return (new AuthResponseDto
-                    {
-                        Token = token,
-                        UserId = existingUserByGoogleId.UserId,
-                        Email = existingUserByGoogleId.Email,
-                        FullName = existingUserByGoogleId.FullName,
-                        Role = existingUserByGoogleId.Role.ToString(),
-                        ImageUrl = existingUserByGoogleId.imageUrl,
-                        Message = "Google login successful!"
-                    }, null);
+                    var authResponse = await CreateAuthResponseAsync(existingUserByGoogleId);
+                    authResponse.Message = "Google login successful!";
+
+                    return (authResponse, null);
                 }
 
-                // Kiểm tra user đã tồn tại với email chưa
+                // Check existing user by email
                 var existingUserByEmail = await _unitOfWork.Users.GetByEmailAsync(payload.Email);
 
                 if (existingUserByEmail != null)
                 {
-                    // User tồn tại với email, link Google account
                     existingUserByEmail.GoogleId = payload.Subject;
                     existingUserByEmail.imageUrl = payload.Picture;
                     existingUserByEmail.IsEmailVerified = payload.EmailVerified;
-                    existingUserByEmail.FullName = payload.Name; // Cập nhật tên từ Google
+                    existingUserByEmail.FullName = payload.Name;
                     existingUserByEmail.UpdatedAt = DateTime.UtcNow;
 
                     await _unitOfWork.Users.UpdateAsync(existingUserByEmail);
                     await _unitOfWork.SaveChangesAsync();
 
-                    var token = GenerateJwtToken(existingUserByEmail);
-                    return (new AuthResponseDto
-                    {
-                        Token = token,
-                        UserId = existingUserByEmail.UserId,
-                        Email = existingUserByEmail.Email,
-                        FullName = existingUserByEmail.FullName,
-                        Role = existingUserByEmail.Role.ToString(),
-                        ImageUrl = existingUserByEmail.imageUrl,
-                        Message = "Google account linked successfully!"
-                    }, null);
+                    var authResponse = await CreateAuthResponseAsync(existingUserByEmail);
+                    authResponse.Message = "Google account linked successfully!";
+
+                    return (authResponse, null);
                 }
 
+                // Create new user
                 var newUser = new User
                 {
                     Email = payload.Email,
@@ -191,17 +261,10 @@ namespace TaskHive.Service.Services.UserService
                 await _unitOfWork.Users.AddAsync(newUser);
                 await _unitOfWork.SaveChangesAsync();
 
-                var newUserToken = GenerateJwtToken(newUser);
-                return (new AuthResponseDto
-                {
-                    Token = newUserToken,
-                    UserId = newUser.UserId,
-                    Email = newUser.Email,
-                    FullName = newUser.FullName,
-                    Role = newUser.Role.ToString(),
-                    ImageUrl = newUser.imageUrl,
-                    Message = "Google account created successfully!"
-                }, null);
+                var newUserAuthResponse = await CreateAuthResponseAsync(newUser);
+                newUserAuthResponse.Message = "Google account created successfully!";
+
+                return (newUserAuthResponse, null);
             }
             catch (InvalidJwtException)
             {
@@ -211,97 +274,6 @@ namespace TaskHive.Service.Services.UserService
             {
                 return (null, $"Google login failed: {ex.Message}");
             }
-        }
-
-        public async Task<(AuthResponseDto? authResponse, string? errorMessage)> RegisterFreelancerAsync(FreelancerRegisterRequestDto model)
-        {
-            if (await _unitOfWork.Users.ExistsByEmailAsync(model.Email))
-            {
-                return (null, "Email already exists.");
-            }
-
-            var freelancer = new Freelancer
-            {
-                Email = model.Email,
-                FullName = model.FullName,
-                Country = model.Country,
-                PasswordHash = HashPassword(model.Password),
-                PortfolioUrl = model.PortfolioUrl,
-                Role = Repository.Enums.UserRole.Freelancer,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsEmailVerified = false,
-                RemainingSlots = 0 // Default slots
-            };
-
-            await _unitOfWork.Users.AddFreelancerAsync(freelancer);
-            await _unitOfWork.SaveChangesAsync();
-
-            if (model.SkillIds?.Any() == true)
-            {
-                foreach (var categoryId in model.SkillIds) 
-                {
-                    var userSkill = new UserSkill
-                    {
-                        UserId = freelancer.UserId,
-                        CategoryId = categoryId, 
-
-                    };
-
-                    await _unitOfWork.UserSkills.AddAsync(userSkill);
-                }
-                await _unitOfWork.SaveChangesAsync();
-            }
-
-            await SendVerificationEmailAsync(freelancer);
-
-            return (new AuthResponseDto
-            {
-                UserId = freelancer.UserId,
-                Email = freelancer.Email,
-                FullName = freelancer.FullName,
-                Role = freelancer.Role.ToString(),
-                ImageUrl = freelancer.imageUrl,
-                Token = GenerateJwtToken(freelancer),
-                Message = "Registration successful! Please check your email to verify your account."
-            }, null);
-        }
-
-        public async Task<(AuthResponseDto? authResponse, string? errorMessage)> RegisterClientAsync(ClientRegisterRequestDto model)
-        {
-            if (await _unitOfWork.Users.ExistsByEmailAsync(model.Email))
-            {
-                return (null, "Email already exists.");
-            }
-
-            var client = new Client
-            {
-                Email = model.Email,
-                FullName = model.FullName,
-                Country = model.Country,
-                PasswordHash = HashPassword(model.Password),
-                Role = Repository.Enums.UserRole.Client,
-                CompanyName = "", 
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                IsEmailVerified = false
-            };
-
-            await _unitOfWork.Users.AddClientAsync(client);
-            await _unitOfWork.SaveChangesAsync();
-
-            await SendVerificationEmailAsync(client);
-
-            return (new AuthResponseDto
-            {
-                UserId = client.UserId,
-                Email = client.Email,
-                FullName = client.FullName,
-                Role = client.Role.ToString(),
-                ImageUrl = client.imageUrl,
-                Token = GenerateJwtToken(client),
-                Message = "Registration successful! Please check your email to verify your account."
-            }, null);
         }
 
         public async Task<(AuthResponseDto? authResponse, string? errorMessage)> GoogleRegisterAsync(GoogleRegisterRequestDto model)
@@ -359,12 +331,12 @@ namespace TaskHive.Service.Services.UserService
 
                     if (model.SkillIds?.Any() == true)
                     {
-                        foreach (var categoryId in model.SkillIds) // Đây thực ra là CategoryId
+                        foreach (var categoryId in model.SkillIds)
                         {
                             var userSkill = new UserSkill
                             {
                                 UserId = freelancer.UserId,
-                                CategoryId = categoryId, // Sử dụng CategoryId
+                                CategoryId = categoryId,
                             };
                             await _unitOfWork.UserSkills.AddAsync(userSkill);
                         }
@@ -396,17 +368,10 @@ namespace TaskHive.Service.Services.UserService
                     newUser = client;
                 }
 
-                var token = GenerateJwtToken(newUser);
-                return (new AuthResponseDto
-                {
-                    Token = token,
-                    UserId = newUser.UserId,
-                    Email = newUser.Email,
-                    FullName = newUser.FullName,
-                    Role = newUser.Role.ToString(),
-                    ImageUrl = newUser.imageUrl,
-                    Message = $"Google {model.Role} registration successful!"
-                }, null);
+                var authResponse = await CreateAuthResponseAsync(newUser);
+                authResponse.Message = $"Google {model.Role} registration successful!";
+
+                return (authResponse, null);
             }
             catch (InvalidJwtException)
             {
@@ -416,6 +381,66 @@ namespace TaskHive.Service.Services.UserService
             {
                 return (null, $"Google registration failed: {ex.Message}");
             }
+        }
+
+        public async Task<(AuthResponseDto? authResponse, string? errorMessage)> RefreshTokenAsync(RefreshTokenRequestDto model)
+        {
+            try
+            {
+                var refreshToken = await _unitOfWork.RefreshTokens.GetByTokenAsync(model.RefreshToken);
+
+                if (refreshToken == null)
+                {
+                    return (null, "Invalid or expired refresh token.");
+                }
+
+                var user = refreshToken.User;
+
+                // Revoke old refresh token
+                refreshToken.IsRevoked = true;
+                await _unitOfWork.RefreshTokens.UpdateAsync(refreshToken);
+
+                // Create new tokens
+                var authResponse = await CreateAuthResponseAsync(user);
+                authResponse.Message = "Token refreshed successfully!";
+
+                return (authResponse, null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Refresh token failed: {ex.Message}");
+                return (null, "Failed to refresh token. Please login again.");
+            }
+        }
+
+        public async Task<bool> LogoutAsync(int userId)
+        {
+            try
+            {
+                await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(userId);
+                await _unitOfWork.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Logout failed: {ex.Message}");
+                return false;
+            }
+        }
+
+
+        private string HashPassword(string password)
+        {
+            using var sha256 = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes(password);
+            var hash = sha256.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
+        }
+
+        private bool VerifyPassword(string enteredPassword, string hashedPassword)
+        {
+            string hashedEnteredPassword = HashPassword(enteredPassword);
+            return hashedEnteredPassword == hashedPassword;
         }
 
         private string GenerateJwtToken(User user)
@@ -444,7 +469,7 @@ namespace TaskHive.Service.Services.UserService
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddDays(7), // Token có hiệu lực 7 ngày
+                Expires = DateTime.UtcNow.AddMinutes(30), 
                 Issuer = jwtIssuer,
                 Audience = jwtAudience,
                 SigningCredentials = credentials
@@ -454,8 +479,6 @@ namespace TaskHive.Service.Services.UserService
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
-
-
 
         public async Task<(EmailVerificationResponseDto response, string? errorMessage)> VerifyEmailAsync(EmailVerificationRequestDto model)
         {
@@ -472,19 +495,16 @@ namespace TaskHive.Service.Services.UserService
                     }, null);
                 }
 
-                // Update user email verification status
                 var user = verificationToken.User;
                 user.IsEmailVerified = true;
                 user.UpdatedAt = DateTime.UtcNow;
                 await _unitOfWork.Users.UpdateAsync(user);
 
-                // Mark token as used
                 verificationToken.IsUsed = true;
                 await _unitOfWork.EmailVerifications.UpdateAsync(verificationToken);
 
                 await _unitOfWork.SaveChangesAsync();
 
-                // Send welcome email
                 await _emailService.SendWelcomeEmailAsync(user.Email, user.FullName);
 
                 return (new EmailVerificationResponseDto
@@ -520,13 +540,11 @@ namespace TaskHive.Service.Services.UserService
                     return (false, "Email is already verified.");
                 }
 
-                // Check if user already has a valid token
                 if (await _unitOfWork.EmailVerifications.HasValidTokenAsync(user.UserId))
                 {
                     return (false, "A verification email has already been sent. Please check your inbox.");
                 }
 
-                // Send new verification email
                 await SendVerificationEmailAsync(user);
 
                 return (true, "Verification email sent successfully. Please check your inbox.");
@@ -548,13 +566,11 @@ namespace TaskHive.Service.Services.UserService
                     return (true, "If an account with that email exists, a password reset link has been sent.");
                 }
 
-                // Check if user already has a valid password reset token
                 if (await _unitOfWork.EmailVerifications.HasValidPasswordResetTokenAsync(user.UserId))
                 {
                     return (false, "A password reset email has already been sent. Please check your inbox.");
                 }
 
-                // Generate reset token
                 var token = GenerateSecureToken();
 
                 var resetToken = new EmailVerificationToken
@@ -562,9 +578,9 @@ namespace TaskHive.Service.Services.UserService
                     UserId = user.UserId,
                     Token = token,
                     Email = user.Email,
-                    IsPasswordReset = true, // Đây là password reset token
+                    IsPasswordReset = true,
                     CreatedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddHours(1), // 1 hour expiry
+                    ExpiresAt = DateTime.UtcNow.AddHours(1),
                     IsUsed = false
                 };
 
@@ -586,7 +602,6 @@ namespace TaskHive.Service.Services.UserService
         {
             try
             {
-                // Tìm password reset token
                 var resetToken = await _unitOfWork.EmailVerifications.GetPasswordResetTokenAsync(model.Token);
 
                 if (resetToken == null)
@@ -598,17 +613,14 @@ namespace TaskHive.Service.Services.UserService
                     }, null);
                 }
 
-                // Update password
                 var user = resetToken.User;
                 user.PasswordHash = HashPassword(model.NewPassword);
                 user.UpdatedAt = DateTime.UtcNow;
                 await _unitOfWork.Users.UpdateAsync(user);
 
-                // Mark token as used
                 resetToken.IsUsed = true;
                 await _unitOfWork.EmailVerifications.UpdateAsync(resetToken);
 
-                // Invalidate all other password reset tokens
                 await _unitOfWork.EmailVerifications.InvalidatePasswordResetTokensAsync(user.UserId);
 
                 await _unitOfWork.SaveChangesAsync();
@@ -645,19 +657,16 @@ namespace TaskHive.Service.Services.UserService
                     return (false, "User not found.");
                 }
 
-                // Verify current password
                 if (!string.IsNullOrEmpty(user.PasswordHash) &&
                     !VerifyPassword(model.CurrentPassword, user.PasswordHash))
                 {
                     return (false, "Current password is incorrect.");
                 }
 
-                // Update password
                 user.PasswordHash = HashPassword(model.NewPassword);
                 user.UpdatedAt = DateTime.UtcNow;
                 await _unitOfWork.Users.UpdateAsync(user);
 
-                // Invalidate all password reset tokens
                 await _unitOfWork.EmailVerifications.InvalidatePasswordResetTokensAsync(user.UserId);
 
                 await _unitOfWork.SaveChangesAsync();
@@ -671,7 +680,6 @@ namespace TaskHive.Service.Services.UserService
             }
         }
 
-        // Cập nhật existing method để set IsPasswordReset = false
         private async Task SendVerificationEmailAsync(User user)
         {
             var token = GenerateSecureToken();
@@ -681,7 +689,7 @@ namespace TaskHive.Service.Services.UserService
                 UserId = user.UserId,
                 Token = token,
                 Email = user.Email,
-                IsPasswordReset = false, // Email verification token
+                IsPasswordReset = false,
                 CreatedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddHours(24),
                 IsUsed = false
@@ -700,11 +708,5 @@ namespace TaskHive.Service.Services.UserService
             rng.GetBytes(tokenBytes);
             return Convert.ToBase64String(tokenBytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
         }
-
-
-
-
-
-
     }
 }

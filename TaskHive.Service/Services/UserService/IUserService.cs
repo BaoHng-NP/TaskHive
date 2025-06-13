@@ -27,6 +27,7 @@ namespace TaskHive.Service.Services.UserService
         Task<(EmailVerificationResponseDto response, string? errorMessage)> ResetPasswordAsync(ResetPasswordRequestDto model);
         Task<(bool success, string message)> ChangePasswordAsync(string userId, ChangePasswordRequestDto model);
 
-
+        Task<(AuthResponseDto? authResponse, string? errorMessage)> RefreshTokenAsync(RefreshTokenRequestDto model);
+        Task<bool> LogoutAsync(int userId);
     }
 }

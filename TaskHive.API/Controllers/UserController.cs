@@ -223,5 +223,39 @@ namespace TaskHive.API.Controllers
             return Ok(new { success = true, message });
         }
 
+        [HttpPost("refresh-token")]
+        [ProducesResponseType(typeof(TaskHive.Service.DTOs.Responses.AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> RefreshToken(RefreshTokenRequestDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var (authResponse, errorMessage) = await _userService.RefreshTokenAsync(model);
+
+            if (errorMessage != null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+
+            return Ok(authResponse);
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> Logout()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out var userIdInt))
+            {
+                await _userService.LogoutAsync(userIdInt);
+            }
+
+            return Ok(new { message = "Logged out successfully" });
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using TaskHive.Repository.Repositories.EmailVerificationRepository;
+﻿using TaskHive.Repository.Repositories;
+using TaskHive.Repository.Repositories.EmailVerificationRepository;
 using TaskHive.Repository.Repositories.GenericRepository;
 using TaskHive.Repository.Repositories.UserRepository;
 using TaskHive.Repository.Repositories.UserSkillRepository;
@@ -25,6 +26,7 @@ namespace TaskHive.API
             services.AddScoped<IUserSkillRepository, UserSkillRepository>();
             services.AddScoped<IEmailVerificationRepository, EmailVerificationRepository>();
             services.AddScoped<IUserSkillRepository, UserSkillRepository>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 
 
