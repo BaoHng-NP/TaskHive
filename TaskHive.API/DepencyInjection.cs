@@ -6,6 +6,7 @@ using TaskHive.Repository.Repositories.GenericRepository;
 using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Repository.Repositories.MembershipRepository;
 using TaskHive.Repository.Repositories.PaymentRepository;
+using TaskHive.Repository.Repositories.SlotPurchaseRepository;
 using TaskHive.Repository.Repositories.UserMembershipRepository;
 using TaskHive.Repository.Repositories.UserRepository;
 using TaskHive.Repository.Repositories.UserSkillRepository;
@@ -17,6 +18,7 @@ using TaskHive.Service.Services.EmailService;
 using TaskHive.Service.Services.JobPostService;
 using TaskHive.Service.Services.MembershipService;
 using TaskHive.Service.Services.PaymentService;
+using TaskHive.Service.Services.SlotPurchaseService;
 using TaskHive.Service.Services.UserMembershipService;
 using TaskHive.Service.Services.UserService;
 
@@ -42,7 +44,7 @@ namespace TaskHive.API
             services.AddScoped<IMembershipService, MembershipService>();
             services.AddScoped<IUserMembershipService, UserMembershipService>();
             services.AddScoped<IPaymentService, PaymentService>();
-
+            services.AddScoped<ISlotPurchaseService, SlotPurchaseService>();
 
             //Repositories
             services.AddScoped<IUserRepository, UserRepository>();
@@ -56,6 +58,7 @@ namespace TaskHive.API
             services.AddScoped<IMembershipRepository, MembershipRepository>();
             services.AddScoped<IUserMembershipRepository, UserMembershipRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
+            services.AddScoped<ISlotPurchaseRepository, SlotPurchaseRepository>();
 
             return services;
 

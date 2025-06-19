@@ -15,5 +15,12 @@ namespace TaskHive.Service.DTOs.Requests.Membership
         public string? Description { get; set; }
 
         public decimal Price { get; set; }
+
+        public int MonthlySlotLimit { get; set; }
+
+        public string? Features { get; set; }
+
+        // Có thể thêm nếu muốn cho phép client set
+        public bool Status { get; set; } = true;
     }
 }

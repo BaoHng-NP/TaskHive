@@ -39,7 +39,7 @@ namespace TaskHive.Repository.Entities
 
         [ForeignKey("SlotPurchaseId")]
         public SlotPurchase? SlotPurchase { get; set; }
-
+        public decimal? SlotQuantity { get; set; }
         [Required]
         public PaymentStatus Status { get; set; }
     }

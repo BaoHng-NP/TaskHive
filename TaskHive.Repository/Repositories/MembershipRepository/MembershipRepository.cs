@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using TaskHive.Repository.Entities;
@@ -44,5 +45,10 @@ namespace TaskHive.Repository.Repositories.MembershipRepository
                 .Where(m => !m.IsDeleted)
                 .ToListAsync();
         }
+        public async Task<bool> AnyAsync(Expression<Func<Membership, bool>> predicate)
+        {
+            return await _context.Memberships.AnyAsync(predicate);
+        }
+
     }
 }

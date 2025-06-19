@@ -5,6 +5,7 @@ using TaskHive.Service.DTOs.Requests.Category;
 using TaskHive.Service.DTOs.Requests.JobPost;
 using TaskHive.Service.DTOs.Requests.Membership;
 using TaskHive.Service.DTOs.Requests.Payment;
+using TaskHive.Service.DTOs.Requests.SlotPurchase;
 using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.DTOs.Responses.User;
@@ -36,13 +37,25 @@ namespace TaskHive.Service.Mappings
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name));
 
             CreateMap<Membership, MembershipResponseDto>().ReverseMap();
-            CreateMap<AddMembershipRequestDto, Membership>();
-            CreateMap<UpdateMembershipRequestDto, Membership>();
+            CreateMap<AddMembershipRequestDto, Membership>()
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status)); // đảm bảo lấy giá trị Status
+
+            CreateMap<UpdateMembershipRequestDto, Membership>()
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
 
             CreateMap<AddPaymentWithMembershipRequestDto, Payment>();
             CreateMap<AddPaymentWithSlotRequestDto, Payment>();
             CreateMap<Payment, PaymentResponseDto>();
 
+            CreateMap<AddSlotPurchaseRequestDto, SlotPurchase>()
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow))
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(_ => true));
+
+            CreateMap<UpdateSlotPurchaseRequestDto, SlotPurchase>()
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
+            CreateMap<SlotPurchase, SlotPurchaseResponseDto>();
 
 
 

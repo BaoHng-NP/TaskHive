@@ -157,16 +157,6 @@ namespace TaskHive.Repository
                 .WithMany(m => m.UserMemberships)
                 .HasForeignKey(um => um.MembershipId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            //
-            // 3. User – SlotPurchase (1‐n)
-            //
-            modelBuilder.Entity<SlotPurchase>()
-                .HasOne(sp => sp.User)
-                .WithMany(u => u.SlotPurchases)
-                .HasForeignKey(sp => sp.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             //
             // 4. User – Payment (1‐n)
             //

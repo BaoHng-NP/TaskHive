@@ -31,8 +31,6 @@ namespace TaskHive.Repository.Entities
         [Required]
         public DateTime EndDate { get; set; }
 
-        public int RemainingSlots { get; set; }
-
         public bool IsActive { get; set; }
     }
 }

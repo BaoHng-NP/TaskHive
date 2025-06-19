@@ -11,6 +11,7 @@ namespace TaskHive.Service.DTOs.Responses
         public PaymentType PaymentType { get; set; }
         public int? MembershipId { get; set; }
         public int? SlotPurchaseId { get; set; }
+        public decimal? SlotQuantity { get; set; }
         public PaymentStatus Status { get; set; }
     }
 }

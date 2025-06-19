@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Net.payOS;
 using System.Text;
+using System.Text.Json.Serialization;
 using TaskHive.API;
 using TaskHive.Repository;
 using TaskHive.Service.Mappings;
@@ -41,6 +42,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddApplicationServices();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 
 builder.Services.AddAuthentication(options =>

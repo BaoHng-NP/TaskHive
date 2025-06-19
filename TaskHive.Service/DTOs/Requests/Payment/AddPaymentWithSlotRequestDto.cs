@@ -20,6 +20,7 @@ namespace TaskHive.Service.DTOs.Requests.Payment
 
         [Required]
         public int SlotPurchaseId { get; set; }
+        public decimal? SlotQuantity { get; set; }
 
         [Required]
         public PaymentStatus Status { get; set; }

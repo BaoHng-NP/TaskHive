@@ -28,6 +28,7 @@ namespace TaskHive.Service.Services.PaymentService
         {
             var payment = _mapper.Map<Payment>(dto);
             payment.SlotPurchaseId = null;
+            payment.SlotQuantity = null;
 
             var success = await _unitOfWork.Payments.AddPaymentAsync(payment);
             if (!success) return (null, "Failed to create payment");
@@ -58,6 +59,8 @@ namespace TaskHive.Service.Services.PaymentService
 
         public async Task<CreatePaymentResult> CreatePaymentLinkAsync(PaymentDataDto dto)
         {
+            // ✅ Tạo OrderCode duy nhất — ví dụ dùng timestamp + random
+            long orderCode = GenerateOrderCode();
             // validate description
             var desc = dto.Description.Length > 25
                 ? dto.Description.Substring(0, 25)
@@ -68,7 +71,7 @@ namespace TaskHive.Service.Services.PaymentService
                            .ToList();
 
             var payRequest = new PaymentData(
-                orderCode: dto.OrderCode,
+                orderCode: orderCode,
                 amount: dto.Amount,
                 description: desc,
                 items: items,
@@ -93,5 +96,13 @@ namespace TaskHive.Service.Services.PaymentService
             var info = await _payOs.getPaymentLinkInformation(orderCode);
             return info;
         }
+        private long GenerateOrderCode()
+        {
+            // Cách đơn giản: Timestamp (milli) + 3 chữ số random (an toàn trong phần lớn các case)
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); // 13 chữ số
+            var random = new Random().Next(100, 999); // 3 chữ số
+            return long.Parse($"{timestamp}{random}");
+        }
+
     }
 }

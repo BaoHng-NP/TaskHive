@@ -52,7 +52,6 @@ namespace TaskHive.Repository.Entities
         public ICollection<Application> Applications { get; set; } = new List<Application>();
         public ICollection<UserSkill> UserSkills { get; set; } = new List<UserSkill>();
         public ICollection<UserMembership> Memberships { get; set; } = new List<UserMembership>();
-        public ICollection<SlotPurchase> SlotPurchases { get; set; } = new List<SlotPurchase>();
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }
 

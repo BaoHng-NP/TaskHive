@@ -10,6 +10,7 @@ using TaskHive.Repository.Repositories.EmailVerificationRepository;
 using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Repository.Repositories.MembershipRepository;
 using TaskHive.Repository.Repositories.PaymentRepository;
+using TaskHive.Repository.Repositories.SlotPurchaseRepository;
 using TaskHive.Repository.Repositories.UserMembershipRepository;
 using TaskHive.Repository.Repositories.UserRepository;
 using TaskHive.Repository.Repositories.UserSkillRepository;
@@ -28,7 +29,7 @@ namespace TaskHive.Repository.UnitOfWork
         IMembershipRepository Memberships { get; }
         IUserMembershipRepository UserMemberships { get; }
         IPaymentRepository Payments { get; }
-
+        ISlotPurchaseRepository SlotPurchases { get; }
         Task<int> SaveChangesAsync();
     }
 }

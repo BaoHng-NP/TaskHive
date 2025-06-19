@@ -13,6 +13,7 @@ using TaskHive.Repository.Repositories.EmailVerificationRepository;
 using TaskHive.Repository.Repositories.MembershipRepository;
 using TaskHive.Repository.Repositories.UserMembershipRepository;
 using TaskHive.Repository.Repositories.PaymentRepository;
+using TaskHive.Repository.Repositories.SlotPurchaseRepository;
 
 namespace TaskHive.Repository.UnitOfWork
 {
@@ -30,6 +31,7 @@ namespace TaskHive.Repository.UnitOfWork
         public IMembershipRepository Memberships { get; }
         public IUserMembershipRepository UserMemberships { get; }
         public IPaymentRepository Payments { get; }
+        public ISlotPurchaseRepository SlotPurchases { get; }
 
         public UnitOfWork(AppDbContext context, 
             IUserRepository userRepository, 
@@ -41,7 +43,8 @@ namespace TaskHive.Repository.UnitOfWork
             IJobPostRepository jobPostRepository,
             IMembershipRepository membershipRepository,
             IUserMembershipRepository userMembershipRepository,
-            IPaymentRepository paymentRepository)
+            IPaymentRepository paymentRepository,
+            ISlotPurchaseRepository slotPurchaseRepository)
         {
             _context = context;
             Users = userRepository;
@@ -54,6 +57,7 @@ namespace TaskHive.Repository.UnitOfWork
             Memberships = membershipRepository;
             UserMemberships = userMembershipRepository;
             Payments = paymentRepository;
+            SlotPurchases = slotPurchaseRepository;
         }
 
 

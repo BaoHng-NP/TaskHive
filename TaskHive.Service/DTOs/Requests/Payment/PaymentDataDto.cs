@@ -9,10 +9,6 @@ namespace TaskHive.Service.DTOs.Requests.Payment
     public class PaymentDataDto
     {
         /// <summary>
-        /// Mã đơn hàng do bạn tự sinh (có thể là số oder hoặc string).
-        /// </summary>
-        public long OrderCode { get; set; }
-
         public int Amount { get; set; }
 
         public string Description { get; set; } = string.Empty;
