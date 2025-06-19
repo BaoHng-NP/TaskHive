@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TaskHive.Repository.Repositories;
 using TaskHive.Repository.Repositories.ApplicationRepository;
 using TaskHive.Repository.Repositories.CategoryRepository;
+using TaskHive.Repository.Repositories.EmailVerificationRepository;
 using TaskHive.Repository.Repositories.JobPostRepository;
+using TaskHive.Repository.Repositories.MembershipRepository;
+using TaskHive.Repository.Repositories.PaymentRepository;
+using TaskHive.Repository.Repositories.UserMembershipRepository;
 using TaskHive.Repository.Repositories.UserRepository;
 using TaskHive.Repository.Repositories.UserSkillRepository;
-using TaskHive.Repository.Repositories.EmailVerificationRepository;
-using TaskHive.Repository.Repositories;
 
 namespace TaskHive.Repository.UnitOfWork
 {
@@ -22,6 +25,9 @@ namespace TaskHive.Repository.UnitOfWork
         IUserSkillRepository UserSkills { get; }
         IEmailVerificationRepository EmailVerifications { get; }
         IRefreshTokenRepository RefreshTokens { get; }
+        IMembershipRepository Memberships { get; }
+        IUserMembershipRepository UserMemberships { get; }
+        IPaymentRepository Payments { get; }
 
         Task<int> SaveChangesAsync();
     }
