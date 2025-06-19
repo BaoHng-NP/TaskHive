@@ -2,15 +2,35 @@
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Net.payOS;
 using System.Text;
 using TaskHive.API;
 using TaskHive.Repository;
 using TaskHive.Service.Mappings;
+using TaskHive.Service.Services.PaymentService;
+using TaskHive.Service.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 1) Bind cấu hình PayOs
+builder.Services.Configure<PayOsSettings>(builder.Configuration.GetSection("PayOs"));
+
+// 2) Đăng ký PayOS SDK làm singleton
+builder.Services.AddSingleton<PayOS>(sp => {
+    var settings = sp.GetRequiredService<IOptions<PayOsSettings>>().Value;
+    return new PayOS(
+        settings.ClientId,
+        settings.ApiKey,
+        settings.ChecksumKey
+    // settings.PartnerCode (nếu dùng)
+    );
+});
+
+// 3) Đăng ký PaymentService đã cập nhật
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // Add services to the container.
 

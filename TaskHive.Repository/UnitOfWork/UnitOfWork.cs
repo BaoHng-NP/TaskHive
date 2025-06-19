@@ -10,6 +10,9 @@ using TaskHive.Repository.Repositories.CategoryRepository;
 using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Repository.Repositories;
 using TaskHive.Repository.Repositories.EmailVerificationRepository;
+using TaskHive.Repository.Repositories.MembershipRepository;
+using TaskHive.Repository.Repositories.UserMembershipRepository;
+using TaskHive.Repository.Repositories.PaymentRepository;
 
 namespace TaskHive.Repository.UnitOfWork
 {
@@ -19,15 +22,26 @@ namespace TaskHive.Repository.UnitOfWork
 
         public IUserRepository Users { get; }
         public IUserSkillRepository UserSkills { get; }
-        public IRefreshTokenRepository? RefreshTokens { get; }
+        public IRefreshTokenRepository RefreshTokens { get; }
         public IEmailVerificationRepository EmailVerifications { get; }
         public IApplicationRepository Applications { get; }
         public ICategoryRepository Categories { get; }
         public IJobPostRepository JobPosts { get; }
+        public IMembershipRepository Memberships { get; }
+        public IUserMembershipRepository UserMemberships { get; }
+        public IPaymentRepository Payments { get; }
 
-        public UnitOfWork(AppDbContext context, IUserRepository userRepository, IApplicationRepository applicationRepository, IUserSkillRepository userSkillRepository, 
-            IEmailVerificationRepository emailVerificationRepository, IRefreshTokenRepository refreshTokenRepository, ICategoryRepository categoryRepository,
-            IJobPostRepository jobPostRepository)
+        public UnitOfWork(AppDbContext context, 
+            IUserRepository userRepository, 
+            IApplicationRepository applicationRepository, 
+            IUserSkillRepository userSkillRepository, 
+            IEmailVerificationRepository emailVerificationRepository, 
+            IRefreshTokenRepository refreshTokenRepository, 
+            ICategoryRepository categoryRepository,
+            IJobPostRepository jobPostRepository,
+            IMembershipRepository membershipRepository,
+            IUserMembershipRepository userMembershipRepository,
+            IPaymentRepository paymentRepository)
         {
             _context = context;
             Users = userRepository;
@@ -37,6 +51,9 @@ namespace TaskHive.Repository.UnitOfWork
             Applications = applicationRepository;
             Categories = categoryRepository;
             JobPosts = jobPostRepository;
+            Memberships = membershipRepository;
+            UserMemberships = userMembershipRepository;
+            Payments = paymentRepository;
         }
 
 
