@@ -47,6 +47,7 @@ namespace TaskHive.Repository.Repositories.UserRepository
         public async Task<Freelancer?> GetFreelancerByIdAsync(int userId) =>
             await _context.Set<Freelancer>()
                 .Include(f => f.UserSkills)
+                    .ThenInclude(us => us.Category)
                 .FirstOrDefaultAsync(f => f.UserId == userId);
 
         public async Task<Client?> GetClientByIdAsync(int userId) =>

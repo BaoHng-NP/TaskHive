@@ -49,7 +49,7 @@ namespace TaskHive.Service.Services.UserService
                 UserId = user.UserId,
                 Token = refreshToken,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(7) 
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
             };
 
             await _unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity);
@@ -59,7 +59,7 @@ namespace TaskHive.Service.Services.UserService
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(30), 
+                ExpiresAt = DateTime.UtcNow.AddMinutes(30),
                 Message = "Authentication successful!"
             };
         }
@@ -94,6 +94,8 @@ namespace TaskHive.Service.Services.UserService
 
         public async Task<(AuthResponseDto? authResponse, string? errorMessage)> RegisterFreelancerAsync(FreelancerRegisterRequestDto model)
         {
+            //using var transaction = await _unitOfWork.BeginTransactionAsync();
+
             try
             {
                 if (await _unitOfWork.Users.ExistsByEmailAsync(model.Email))
@@ -116,6 +118,7 @@ namespace TaskHive.Service.Services.UserService
                 };
 
                 await _unitOfWork.Users.AddFreelancerAsync(freelancer);
+                await _unitOfWork.SaveChangesAsync();
 
                 if (model.SkillIds?.Any() == true)
                 {
@@ -243,27 +246,8 @@ namespace TaskHive.Service.Services.UserService
                     return (authResponse, null);
                 }
 
-                // Create new user
-                var newUser = new User
-                {
-                    Email = payload.Email,
-                    FullName = payload.Name,
-                    GoogleId = payload.Subject,
-                    imageUrl = payload.Picture,
-                    Role = Repository.Enums.UserRole.Freelancer,
-                    IsEmailVerified = payload.EmailVerified,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    PasswordHash = null
-                };
-
-                await _unitOfWork.Users.AddAsync(newUser);
-                await _unitOfWork.SaveChangesAsync();
-
-                var newUserAuthResponse = await CreateAuthResponseAsync(newUser);
-                newUserAuthResponse.Message = "Google account created successfully!";
-
-                return (newUserAuthResponse, null);
+                // User does not exist, return special message for frontend to handle Google register
+                return (null, "GOOGLE_REGISTER_REQUIRED");
             }
             catch (InvalidJwtException)
             {
@@ -326,6 +310,7 @@ namespace TaskHive.Service.Services.UserService
                     };
 
                     await _unitOfWork.Users.AddFreelancerAsync(freelancer);
+                    await _unitOfWork.SaveChangesAsync();
 
 
                     if (model.SkillIds?.Any() == true)
@@ -468,7 +453,7 @@ namespace TaskHive.Service.Services.UserService
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(30), 
+                Expires = DateTime.UtcNow.AddMinutes(30),
                 Issuer = jwtIssuer,
                 Audience = jwtAudience,
                 SigningCredentials = credentials
@@ -707,5 +692,22 @@ namespace TaskHive.Service.Services.UserService
             rng.GetBytes(tokenBytes);
             return Convert.ToBase64String(tokenBytes).Replace("+", "-").Replace("/", "_").Replace("=", "");
         }
+
+
+
+        //User CRUD
+
+        public async Task<Freelancer?> GetFreelancerByIdAsync(int userId)
+        {
+            return await _unitOfWork.Users.GetFreelancerByIdAsync(userId);
+        }
+        public async Task<Client?> GetClientByIdAsync(int userId)
+        {
+            return await _unitOfWork.Users.GetClientByIdAsync(userId);
+        }
+
+
+
+        
     }
 }

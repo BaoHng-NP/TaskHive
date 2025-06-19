@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TaskHive.Repository.Entities;
 using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses;
 
@@ -29,5 +30,12 @@ namespace TaskHive.Service.Services.UserService
 
         Task<(AuthResponseDto? authResponse, string? errorMessage)> RefreshTokenAsync(RefreshTokenRequestDto model);
         Task<bool> LogoutAsync(int userId);
+
+        Task<Freelancer?> GetFreelancerByIdAsync(int userId);
+
+        Task<Client?> GetClientByIdAsync(int userId);
+
+
+
     }
 }

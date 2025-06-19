@@ -1,23 +1,27 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using TaskHive.Repository.Entities;
 using TaskHive.Service.DTOs.Requests.User;
+using TaskHive.Service.DTOs.Responses.User;
 using TaskHive.Service.Services.UserService;
 
 namespace TaskHive.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase
+    public class UserController: ControllerBase
     {
         private readonly IUserService _userService;
-
-        public UserController(IUserService userService)
+        private readonly IMapper _mapper;
+        public UserController(IUserService userService, IMapper mapper)
         {
             _userService = userService;
+            _mapper = mapper;
         }
 
         [HttpPost("register/freelancer")]
@@ -257,5 +261,46 @@ namespace TaskHive.API.Controllers
 
             return Ok(new { message = "Logged out successfully" });
         }
+
+        [HttpGet("freelancer/{userId}")]
+        //[Authorize(Roles = "Freelancer,Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+
+        public async Task<IActionResult> GetFreelancerProfile(int userId)
+        {
+            try
+            {
+                var freelancer = await _userService.GetFreelancerByIdAsync(userId);
+                if (freelancer == null) return NotFound(new { message = $"Cannot fetch user profile" });
+                var response = _mapper.Map<FreelancerProfileResponseDto>(freelancer);
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+
+
+        [HttpGet("client/{userId}")]
+        //[Authorize(Roles = "Client,Admin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetClientProfile(int userId)
+        {
+            try
+            {
+                var client = await _userService.GetClientByIdAsync(userId);
+                if (client == null) return NotFound(new { message = $"Cannot fetch user profile" });
+                var response = _mapper.Map<ClientProfileResponseDto>(client);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
     }
 }
