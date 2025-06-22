@@ -14,6 +14,7 @@ using TaskHive.Repository.UnitOfWork;
 using TaskHive.Service.Mappings;
 using TaskHive.Service.Services.ApplicationService;
 using TaskHive.Service.Services.CategoryService;
+using TaskHive.Service.Services.CloudinaryService;
 using TaskHive.Service.Services.EmailService;
 using TaskHive.Service.Services.JobPostService;
 using TaskHive.Service.Services.MembershipService;
@@ -45,6 +46,7 @@ namespace TaskHive.API
             services.AddScoped<IUserMembershipService, UserMembershipService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<ISlotPurchaseService, SlotPurchaseService>();
+            services.AddScoped<ICloudinaryService, CloudinaryService>();
 
             //Repositories
             services.AddScoped<IUserRepository, UserRepository>();

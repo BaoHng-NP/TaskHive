@@ -44,29 +44,32 @@ namespace TaskHive.API.Controllers
         }
 
         [HttpPost]
-        [ProducesResponseType(typeof(ApplicationResponseDto), (int)HttpStatusCode.Created)]
-        [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
-        public async Task<IActionResult> AddApplication(AddApplicationRequestDto applicationDto)
+        [ProducesResponseType(typeof(ApplicationResponseDto), StatusCodes.Status201Created)]
+        public async Task<IActionResult> AddApplication([FromForm] AddApplicationRequestDto applicationDto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             var (application, error) = await _applicationService.AddApplicationAsync(applicationDto);
-            if (error != null) return BadRequest(error);
+            if (error != null)
+                return BadRequest(error);
 
-            return CreatedAtAction(nameof(GetApplicationById), new { applicationId = application?.ApplicationId }, application);
+            return CreatedAtAction(nameof(GetApplicationById),
+                new { applicationId = application?.ApplicationId }, application);
         }
 
         [HttpPut]
-        [ProducesResponseType(typeof(ApplicationResponseDto), (int)HttpStatusCode.OK)]
-        [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        public async Task<IActionResult> UpdateApplication(UpdateApplicationRequestDto applicationDto)
+        [ProducesResponseType(typeof(ApplicationResponseDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateApplication([FromForm] UpdateApplicationRequestDto applicationDto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             var (application, error) = await _applicationService.UpdateApplicationAsync(applicationDto);
-            if (error != null) return BadRequest(error);
-            if (application == null) return NotFound();
+            if (error != null)
+                return BadRequest(error);
+            if (application == null)
+                return NotFound();
 
             return Ok(application);
         }

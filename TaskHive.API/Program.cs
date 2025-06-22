@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using CloudinaryDotNet;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,18 @@ builder.Services.AddSingleton<PayOS>(sp => {
 
 // 3) Đăng ký PaymentService đã cập nhật
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+// 1) Bind cấu hình Cloudinary
+builder.Services.Configure<CloudinarySettings>(
+    builder.Configuration.GetSection("Cloudinary"));
+
+// 2) Đăng ký Cloudinary làm singleton
+builder.Services.AddSingleton(sp =>
+{
+    var cfg = sp.GetRequiredService<IOptions<CloudinarySettings>>().Value;
+    var account = new Account(cfg.CloudName, cfg.ApiKey, cfg.ApiSecret);
+    return new Cloudinary(account);
+});
 
 // Add services to the container.
 

@@ -18,8 +18,11 @@ namespace TaskHive.Service.Mappings
         public AutoMapperProfile()
         {
             // Application mappings
-            CreateMap<AddApplicationRequestDto, Application>();
-            CreateMap<UpdateApplicationRequestDto, Application>();
+            CreateMap<AddApplicationRequestDto, Application>()
+            .ForMember(dest => dest.CVFile, opt => opt.Ignore());
+
+            CreateMap<UpdateApplicationRequestDto, Application>()
+                .ForMember(dest => dest.CVFile, opt => opt.Ignore());
             CreateMap<Application, ApplicationResponseDto>()
                 .ForMember(dest => dest.FreelancerName, opt => opt.MapFrom(src => src.Freelancer.FullName))
                 .ForMember(dest => dest.JobPostTitle, opt => opt.MapFrom(src => src.JobPost.Title));

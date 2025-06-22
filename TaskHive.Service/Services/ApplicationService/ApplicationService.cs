@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,11 +17,13 @@ namespace TaskHive.Service.Services.ApplicationService
     {
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly Cloudinary _cloudinary;
 
-        public ApplicationService(IUnitOfWork unitOfWork, IMapper mapper)
+        public ApplicationService(IUnitOfWork unitOfWork, IMapper mapper, Cloudinary cloudinary)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cloudinary = cloudinary;
         }
 
         public async Task<ApplicationResponseDto?> GetApplicationByIdAsync(int applicationId)
@@ -40,31 +44,61 @@ namespace TaskHive.Service.Services.ApplicationService
             return _mapper.Map<List<ApplicationResponseDto>>(applications);
         }
 
-        public async Task<(ApplicationResponseDto? application, string? error)> AddApplicationAsync(AddApplicationRequestDto applicationDto)
+        public async Task<(ApplicationResponseDto? application, string? error)> AddApplicationAsync(AddApplicationRequestDto dto)
         {
-            var application = _mapper.Map<Application>(applicationDto);
+            var application = _mapper.Map<Application>(dto);
+
+            // 1. Upload CV nếu client gửi lên
+            if (dto.CVFile != null)
+            {
+                var uploadParams = new RawUploadParams
+                {
+                    File = new FileDescription(dto.CVFile.FileName, dto.CVFile.OpenReadStream()),
+                    PublicId = $"cvs/{Path.GetFileNameWithoutExtension(dto.CVFile.FileName)}_{Guid.NewGuid()}"
+                };
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                application.CVFile = uploadResult.SecureUrl.ToString();
+            }
+
+            // 2. Các trường mặc định
             application.AppliedAt = DateTime.UtcNow;
             application.IsDeleted = false;
 
+            // 3. Lưu
             var success = await _unitOfWork.Applications.AddApplicationAsync(application);
-            if (!success) return (null, "Failed to add application");
+            if (!success)
+                return (null, "Thêm application thất bại");
 
             var result = await _unitOfWork.Applications.GetApplicationByIdAsync(application.ApplicationId);
             return (_mapper.Map<ApplicationResponseDto>(result), null);
         }
 
-        public async Task<(ApplicationResponseDto? application, string? error)> UpdateApplicationAsync(UpdateApplicationRequestDto applicationDto)
+        public async Task<(ApplicationResponseDto? application, string? error)> UpdateApplicationAsync(UpdateApplicationRequestDto dto)
         {
-            var existingApplication = await _unitOfWork.Applications.GetApplicationByIdAsync(applicationDto.ApplicationId);
-            if (existingApplication == null) return (null, "Application not found");
+            var existing = await _unitOfWork.Applications.GetApplicationByIdAsync(dto.ApplicationId);
+            if (existing == null)
+                return (null, "Application không tồn tại");
 
-            _mapper.Map(applicationDto, existingApplication);
-            existingApplication.UpdatedAt = DateTime.UtcNow;
+            // Upload CV mới nếu client gửi
+            if (dto.CVFile != null)
+            {
+                var uploadParams = new RawUploadParams
+                {
+                    File = new FileDescription(dto.CVFile.FileName, dto.CVFile.OpenReadStream()),
+                    PublicId = $"cvs/{Path.GetFileNameWithoutExtension(dto.CVFile.FileName)}_{Guid.NewGuid()}"
+                };
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                existing.CVFile = uploadResult.SecureUrl.ToString();
+            }
 
-            var success = await _unitOfWork.Applications.UpdateApplicationAsync(existingApplication);
-            if (!success) return (null, "Failed to update application");
+            _mapper.Map(dto, existing);
+            existing.UpdatedAt = DateTime.UtcNow;
 
-            var result = await _unitOfWork.Applications.GetApplicationByIdAsync(existingApplication.ApplicationId);
+            var updated = await _unitOfWork.Applications.UpdateApplicationAsync(existing);
+            if (!updated)
+                return (null, "Cập nhật thất bại");
+
+            var result = await _unitOfWork.Applications.GetApplicationByIdAsync(existing.ApplicationId);
             return (_mapper.Map<ApplicationResponseDto>(result), null);
         }
 
