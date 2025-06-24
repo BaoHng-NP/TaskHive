@@ -262,6 +262,47 @@ namespace TaskHive.API.Controllers
             return Ok(new { message = "Logged out successfully" });
         }
 
+
+        [HttpGet("me")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetCurrentUserProfile()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            if (string.IsNullOrEmpty(userId) || !int.TryParse(userId, out var userIdInt))
+            {
+                return Unauthorized(new { message = "Invalid user ID" });
+            }
+            try
+            {
+                if (string.Equals(userRole, "Freelancer", StringComparison.OrdinalIgnoreCase))
+                {
+                    var freelancer = await _userService.GetFreelancerByIdAsync(userIdInt);
+                    if (freelancer == null) return NotFound(new { message = "User not found" });
+                    var response = _mapper.Map<FreelancerProfileResponseDto>(freelancer);
+                    return Ok(response);
+                }
+                else if (string.Equals(userRole, "Client", StringComparison.OrdinalIgnoreCase))
+                {
+                    var client = await _userService.GetClientByIdAsync(userIdInt);
+                    if (client == null) return NotFound(new { message = "User not found" });
+                    var response = _mapper.Map<ClientProfileResponseDto>(client);
+                    return Ok(response);
+                }
+                else
+                {
+                    return Unauthorized(new { message = "Invalid user role" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+
         [HttpGet("freelancer/{userId}")]
         //[Authorize(Roles = "Freelancer,Admin")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -302,5 +343,36 @@ namespace TaskHive.API.Controllers
             }
         }
 
+
+        [HttpPut("freelancer/{userId}")]
+        public async Task<IActionResult> UpdateFreelancerProfile(int userId, FreelancerProfileDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var (freelancerProfileResponse, errorMessage) = await _userService.UpdateFreelancerProfileAsync(userId, model);
+            if (errorMessage != null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+            return Ok(freelancerProfileResponse);
+        }
+
+
+        [HttpPut("client/{userId}")]
+        public async Task<IActionResult> UpdateClientProfile(int userId, ClientProfileDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var (clientProfileResponse, errorMessage) = await _userService.UpdateClientProfileAsync(userId, model);
+            if (errorMessage != null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+            return Ok(clientProfileResponse);
+        }
     }
 }

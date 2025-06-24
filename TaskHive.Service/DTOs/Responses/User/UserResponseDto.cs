@@ -9,8 +9,11 @@ namespace TaskHive.Service.DTOs.Responses.User
 {
     public class UserResponseDto
     {
+        public int Id { get; set; }
+        public string FullName { get; set; }
+
     }
-        public class UserSkillDto
+    public class UserSkillDto
     {
         public int Id { get; set; }
         public int CategoryId { get; set; }
@@ -19,8 +22,10 @@ namespace TaskHive.Service.DTOs.Responses.User
     }
 
 
+
     public class FreelancerProfileResponseDto
     {
+        public int UserId { get; set; }
         public string Email { get; set; } = null!;
         public string FullName { get; set; }
         public string? UserName { get; set; }
@@ -28,7 +33,7 @@ namespace TaskHive.Service.DTOs.Responses.User
         public string? PortfolioUrl { get; set; }
         public string? Country { get; set; }
         public string? imageUrl { get; set; }
-
+        public string? Role { get; set; }
         public bool? IsEmailVerified { get; set; }
 
         public List<UserSkillDto> Skills { get; set; } = new();
@@ -36,6 +41,7 @@ namespace TaskHive.Service.DTOs.Responses.User
 
     public class ClientProfileResponseDto
     {
+        public int UserId { get; set; }
         public string Email { get; set; } = null!;
 
         public string FullName { get; set; }
@@ -44,6 +50,8 @@ namespace TaskHive.Service.DTOs.Responses.User
         public string? CompanyDescription { get; set; }
         public string? Country { get; set; }
         public string? imageUrl { get; set; }
+        public string? Role { get; set; }
+
         public bool? IsEmailVerified { get; set; }
     }
 }

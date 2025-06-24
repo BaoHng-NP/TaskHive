@@ -12,6 +12,8 @@ using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses;
 using Google.Apis.Auth;
 using TaskHive.Service.Services.EmailService;
+using TaskHive.Service.DTOs.Responses.User;
+using AutoMapper;
 
 namespace TaskHive.Service.Services.UserService
 {
@@ -20,12 +22,13 @@ namespace TaskHive.Service.Services.UserService
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
-
-        public UserService(IUnitOfWork unitOfWork, IConfiguration configuration, IEmailService emailService)
+        private readonly IMapper _mapper;
+        public UserService(IUnitOfWork unitOfWork, IConfiguration configuration, IEmailService emailService, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
             _emailService = emailService;
+            _mapper = mapper;
         }
 
         // Generate refresh token
@@ -72,6 +75,11 @@ namespace TaskHive.Service.Services.UserService
 
                 if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !VerifyPassword(model.Password, user.PasswordHash))
                 {
+                    // Check if user exists and has GoogleId (registered via Google)
+                    if (user != null && !string.IsNullOrEmpty(user.GoogleId))
+                    {
+                        return (null, "This account was registered with Google. Please login with Google or reset your password to set a new one.");
+                    }
                     return (null, "Invalid email or password.");
                 }
 
@@ -706,8 +714,73 @@ namespace TaskHive.Service.Services.UserService
             return await _unitOfWork.Users.GetClientByIdAsync(userId);
         }
 
+        public async Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateFreelancerProfileAsync(int userId, FreelancerProfileDto model)
+        {
+            try
+            {
+                var freelancer = await _unitOfWork.Users.GetFreelancerByIdAsync(userId);
+                if (freelancer == null)
+                {
+                    return (null, "User not found.");
+                }
+
+                _mapper.Map(model, freelancer);
+
+                freelancer.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.Users.UpdateAsync(freelancer);
+                await _unitOfWork.SaveChangesAsync();
+
+                FreelancerProfileResponseDto response = new();
+                _mapper.Map(freelancer, response);
 
 
-        
+                return (response, null);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Failed to update freelancer profile: {ex.Message}");
+            }
+        }
+
+        public async Task<(ClientProfileResponseDto? clientProfileResponse, string? errorMessage)> UpdateClientProfileAsync(int userId, ClientProfileDto model)
+        {
+            try
+            {
+                var client = await _unitOfWork.Users.GetClientByIdAsync(userId);
+                if (client == null)
+                {
+                    return (null, "User not found.");
+                }
+
+                _mapper.Map(model, client);
+
+                client.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.Users.UpdateAsync(client);
+                await _unitOfWork.SaveChangesAsync();
+
+                ClientProfileResponseDto response = new();
+                _mapper.Map(client, response);
+
+                // Print all fields of client
+                Console.WriteLine("Client fields:");
+                foreach (var prop in client.GetType().GetProperties())
+                {
+                    Console.WriteLine($"{prop.Name}: {prop.GetValue(client)}");
+                }
+
+                // Print all fields of response
+                Console.WriteLine("ClientProfileResponseDto fields:");
+                foreach (var prop in response.GetType().GetProperties())
+                {
+                    Console.WriteLine($"{prop.Name}: {prop.GetValue(response)}");
+                }
+
+                return (response, null);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Failed to update client profile: {ex.Message}");
+            }
+        }
     }
 }

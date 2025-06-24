@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using TaskHive.Repository.Entities;
 using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses;
+using TaskHive.Service.DTOs.Responses.User;
 
 namespace TaskHive.Service.Services.UserService
 {
@@ -35,7 +36,8 @@ namespace TaskHive.Service.Services.UserService
 
         Task<Client?> GetClientByIdAsync(int userId);
 
+        Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateFreelancerProfileAsync(int userId, FreelancerProfileDto model);
 
-
+        Task<(ClientProfileResponseDto? clientProfileResponse, string? errorMessage)> UpdateClientProfileAsync(int userId, ClientProfileDto model);
     }
 }

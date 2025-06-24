@@ -64,7 +64,10 @@ namespace TaskHive.Service.Mappings
 
             // User mappings
             CreateMap<FreelancerProfileDto, User>();
+            CreateMap<FreelancerProfileDto, Freelancer>();
             CreateMap<ClientProfileDto, User>();
+            CreateMap<ClientProfileDto, Client>();
+
             // Direct mapping from derived entities to response DTOs
             CreateMap<Freelancer, FreelancerProfileResponseDto>()
                 .ForMember(dest => dest.Skills, opt => opt.MapFrom(src => src.UserSkills))
