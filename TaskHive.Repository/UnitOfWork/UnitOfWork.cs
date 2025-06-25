@@ -14,6 +14,8 @@ using TaskHive.Repository.Repositories.MembershipRepository;
 using TaskHive.Repository.Repositories.UserMembershipRepository;
 using TaskHive.Repository.Repositories.PaymentRepository;
 using TaskHive.Repository.Repositories.SlotPurchaseRepository;
+using TaskHive.Repository.Repositories.ConversationRepository;
+using TaskHive.Repository.Repositories.MessageRepository;
 
 namespace TaskHive.Repository.UnitOfWork
 {
@@ -32,6 +34,8 @@ namespace TaskHive.Repository.UnitOfWork
         public IUserMembershipRepository UserMemberships { get; }
         public IPaymentRepository Payments { get; }
         public ISlotPurchaseRepository SlotPurchases { get; }
+        public IConversationRepository Conversations { get; }
+        public IMessageRepository Messages { get; }
 
         public UnitOfWork(AppDbContext context, 
             IUserRepository userRepository, 
@@ -44,7 +48,9 @@ namespace TaskHive.Repository.UnitOfWork
             IMembershipRepository membershipRepository,
             IUserMembershipRepository userMembershipRepository,
             IPaymentRepository paymentRepository,
-            ISlotPurchaseRepository slotPurchaseRepository)
+            ISlotPurchaseRepository slotPurchaseRepository,
+            IConversationRepository conversationRepository,
+            IMessageRepository messageRepository)
         {
             _context = context;
             Users = userRepository;
@@ -58,6 +64,8 @@ namespace TaskHive.Repository.UnitOfWork
             UserMemberships = userMembershipRepository;
             Payments = paymentRepository;
             SlotPurchases = slotPurchaseRepository;
+            Conversations = conversationRepository;
+            Messages = messageRepository;
         }
 
 

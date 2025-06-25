@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using TaskHive.Repository.Repositories;
 using TaskHive.Repository.Repositories.ApplicationRepository;
 using TaskHive.Repository.Repositories.CategoryRepository;
+using TaskHive.Repository.Repositories.ConversationRepository;
 using TaskHive.Repository.Repositories.EmailVerificationRepository;
 using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Repository.Repositories.MembershipRepository;
+using TaskHive.Repository.Repositories.MessageRepository;
 using TaskHive.Repository.Repositories.PaymentRepository;
 using TaskHive.Repository.Repositories.SlotPurchaseRepository;
 using TaskHive.Repository.Repositories.UserMembershipRepository;
@@ -30,6 +32,8 @@ namespace TaskHive.Repository.UnitOfWork
         IUserMembershipRepository UserMemberships { get; }
         IPaymentRepository Payments { get; }
         ISlotPurchaseRepository SlotPurchases { get; }
+        IConversationRepository Conversations { get; }
+        IMessageRepository Messages { get; }
         Task<int> SaveChangesAsync();
     }
 }

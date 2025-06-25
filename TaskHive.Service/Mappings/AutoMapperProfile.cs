@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using TaskHive.Repository.Entities;
+using TaskHive.Service.DTOs;
 using TaskHive.Service.DTOs.Requests.Application;
 using TaskHive.Service.DTOs.Requests.Category;
 using TaskHive.Service.DTOs.Requests.JobPost;
@@ -59,6 +60,14 @@ namespace TaskHive.Service.Mappings
                 .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
             CreateMap<SlotPurchase, SlotPurchaseResponseDto>();
+
+            CreateMap<Conversation, ConversationDto>()
+            .ForMember(d => d.MemberIds, opt => opt.MapFrom(s => s.Members.Select(m => m.UserId)));
+            CreateMap<CreateConversationDto, Conversation>();
+
+            CreateMap<Message, MessageDto>();
+            CreateMap<SendMessageDto, Message>()
+                .ForMember(m => m.FileURL, opt => opt.MapFrom(src => src.FileURL));
 
 
 

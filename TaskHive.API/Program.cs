@@ -1,5 +1,4 @@
 ﻿using CloudinaryDotNet;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +9,7 @@ using Net.payOS;
 using System.Text;
 using System.Text.Json.Serialization;
 using TaskHive.API;
+using TaskHive.API.Hubs;
 using TaskHive.Repository;
 using TaskHive.Service.Mappings;
 using TaskHive.Service.Services.PaymentService;
@@ -17,61 +17,75 @@ using TaskHive.Service.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1) Bind cấu hình PayOs
+// --- 1) Bind & register PayOS (unchanged) ---
 builder.Services.Configure<PayOsSettings>(builder.Configuration.GetSection("PayOs"));
-
-// 2) Đăng ký PayOS SDK làm singleton
 builder.Services.AddSingleton<PayOS>(sp => {
-    var settings = sp.GetRequiredService<IOptions<PayOsSettings>>().Value;
-    return new PayOS(
-        settings.ClientId,
-        settings.ApiKey,
-        settings.ChecksumKey
-    // settings.PartnerCode (nếu dùng)
+    var s = sp.GetRequiredService<IOptions<PayOsSettings>>().Value;
+    return new PayOS(s.ClientId, s.ApiKey, s.ChecksumKey);
+});
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+// --- 2) Bind & register Cloudinary (unchanged) ---
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
+builder.Services.AddSingleton(sp => {
+    var c = sp.GetRequiredService<IOptions<CloudinarySettings>>().Value;
+    return new Cloudinary(new Account(c.CloudName, c.ApiKey, c.ApiSecret));
+});
+
+// --- 3) CORS: chỉ 1 policy, cho phép FE và credentials ---
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins("http://localhost:5173")  // FE origin
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials()
     );
 });
 
-// 3) Đăng ký PaymentService đã cập nhật
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-
-// 1) Bind cấu hình Cloudinary
-builder.Services.Configure<CloudinarySettings>(
-    builder.Configuration.GetSection("Cloudinary"));
-
-// 2) Đăng ký Cloudinary làm singleton
-builder.Services.AddSingleton(sp =>
-{
-    var cfg = sp.GetRequiredService<IOptions<CloudinarySettings>>().Value;
-    var account = new Account(cfg.CloudName, cfg.ApiKey, cfg.ApiSecret);
-    return new Cloudinary(account);
-});
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+// --- 4) SignalR & Controllers & EF & DI & Swagger ---
+builder.Services.AddSignalR();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddApplicationServices();
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
-builder.Services
-    .AddControllers()
-    .AddJsonOptions(options =>
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "TaskHive API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "JWT Authorization header"
     });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+        {
+            new OpenApiSecurityScheme {
+                Reference = new OpenApiReference {
+                    Type = ReferenceType.SecurityScheme,
+                    Id   = "Bearer"
+                }
+            },
+            new string[]{}
+        }
+    });
+});
 
-
-builder.Services.AddAuthentication(options =>
+// --- 5) Authentication / Google ---
+builder.Services.AddAuthentication(opts =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    opts.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    opts.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options =>
+.AddJwtBearer(opts =>
 {
-    options.TokenValidationParameters = new TokenValidationParameters
+    opts.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
@@ -79,82 +93,49 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+    };
+    opts.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var path = context.HttpContext.Request.Path;
+            // nếu request tới hub chat và có access_token trong query
+            if (path.StartsWithSegments("/hubs/chat") &&
+                context.Request.Query.TryGetValue("access_token", out var token))
+            {
+                context.Token = token;
+            }
+            return Task.CompletedTask;
+        }
     };
 })
-.AddGoogle(options =>
+.AddGoogle(opts =>
 {
-    options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+    opts.ClientId = builder.Configuration["Authentication:Google:ClientId"]!;
+    opts.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
 });
-
-
-
-
-builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "TaskHive API", Version = "v1" });
-
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n " +
-                      "Enter your token in the text input below \r\n\r\n" +
-                      "Example: \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,        
-        Scheme = "bearer",                   
-        BearerFormat = "JWT"                  
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement()
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "bearer",             
-                Name = "Bearer",
-                In = ParameterLocation.Header,
-            },
-            new List<string>()
-        }
-    });
-});
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        builder => builder.AllowAnyOrigin()
-                          .AllowAnyHeader()
-                          .AllowAnyMethod());
-});
-
-
 
 var app = builder.Build();
 
+// --- 6) Middleware pipeline ---
+app.UseCors();                  // <-- chỉ gọi UseCors() một lần (dùng default policy)
 if (app.Environment.IsDevelopment())
 {
-    //app.MapOpenApi();
     app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    app.UseSwaggerUI(c =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskHive API V1");
-        options.RoutePrefix = string.Empty;
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskHive API V1");
+        c.RoutePrefix = string.Empty;
     });
 }
-
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseCors("AllowFrontend");
+
+// --- 7) Map SignalR hub & API controllers ---
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
 
 app.Run();

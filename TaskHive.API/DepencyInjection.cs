@@ -1,10 +1,12 @@
 ﻿using TaskHive.Repository.Repositories;
 using TaskHive.Repository.Repositories.ApplicationRepository;
 using TaskHive.Repository.Repositories.CategoryRepository;
+using TaskHive.Repository.Repositories.ConversationRepository;
 using TaskHive.Repository.Repositories.EmailVerificationRepository;
 using TaskHive.Repository.Repositories.GenericRepository;
 using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Repository.Repositories.MembershipRepository;
+using TaskHive.Repository.Repositories.MessageRepository;
 using TaskHive.Repository.Repositories.PaymentRepository;
 using TaskHive.Repository.Repositories.SlotPurchaseRepository;
 using TaskHive.Repository.Repositories.UserMembershipRepository;
@@ -14,10 +16,13 @@ using TaskHive.Repository.UnitOfWork;
 using TaskHive.Service.Mappings;
 using TaskHive.Service.Services.ApplicationService;
 using TaskHive.Service.Services.CategoryService;
+using TaskHive.Service.Services.ChatService;
 using TaskHive.Service.Services.CloudinaryService;
+using TaskHive.Service.Services.ConversationService;
 using TaskHive.Service.Services.EmailService;
 using TaskHive.Service.Services.JobPostService;
 using TaskHive.Service.Services.MembershipService;
+using TaskHive.Service.Services.MessageService;
 using TaskHive.Service.Services.PaymentService;
 using TaskHive.Service.Services.SlotPurchaseService;
 using TaskHive.Service.Services.UserMembershipService;
@@ -47,6 +52,10 @@ namespace TaskHive.API
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<ISlotPurchaseService, SlotPurchaseService>();
             services.AddScoped<ICloudinaryService, CloudinaryService>();
+            services.AddScoped<IChatService, ChatService>();
+            services.AddScoped<IConversationService, ConversationService>();
+            services.AddScoped<IMessageService, MessageService>();
+
 
             //Repositories
             services.AddScoped<IUserRepository, UserRepository>();
@@ -61,6 +70,8 @@ namespace TaskHive.API
             services.AddScoped<IUserMembershipRepository, UserMembershipRepository>();
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<ISlotPurchaseRepository, SlotPurchaseRepository>();
+            services.AddScoped<IConversationRepository, ConversationRepository>();
+            services.AddScoped<IMessageRepository, MessageRepository>();
 
             return services;
 
