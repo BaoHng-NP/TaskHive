@@ -1,13 +1,16 @@
 ﻿using AutoMapper;
 using TaskHive.Repository.Entities;
 using TaskHive.Service.DTOs.Requests.Application;
+using TaskHive.Service.DTOs.Requests.BlogPost;
 using TaskHive.Service.DTOs.Requests.Category;
 using TaskHive.Service.DTOs.Requests.JobPost;
 using TaskHive.Service.DTOs.Requests.Membership;
 using TaskHive.Service.DTOs.Requests.Payment;
+using TaskHive.Service.DTOs.Requests.Review;
 using TaskHive.Service.DTOs.Requests.SlotPurchase;
 using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses;
+using TaskHive.Service.DTOs.Responses.BlogPost;
 using TaskHive.Service.DTOs.Responses.User;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -67,6 +70,7 @@ namespace TaskHive.Service.Mappings
             CreateMap<FreelancerProfileDto, Freelancer>();
             CreateMap<ClientProfileDto, User>();
             CreateMap<ClientProfileDto, Client>();
+            CreateMap<User, UserResponseDto>();
 
             // Direct mapping from derived entities to response DTOs
             CreateMap<Freelancer, FreelancerProfileResponseDto>()
@@ -93,6 +97,35 @@ namespace TaskHive.Service.Mappings
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
                 .ForMember(dest => dest.CategoryDescription, opt => opt.MapFrom(src => src.Category.Description));
 
+            //BlogPost mappings
+
+            CreateMap<BlogPostRequestDto, BlogPost>()
+                .ForMember(dest => dest.BlogpostId, opt => opt.Ignore())
+                .ForMember(dest => dest.AuthorId, opt => opt.Ignore())
+                .ForMember(dest => dest.Author, opt => opt.Ignore());
+
+            CreateMap<BlogPost, BlogPostResponseDto>()
+                .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Author));
+
+            CreateMap<UpdateBlogPostDto, BlogPost>()
+                .ForMember(dest => dest.BlogpostId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.AuthorId, opt => opt.Ignore())
+                .ForMember(dest => dest.Author, opt => opt.Ignore());
+
+            //Review mappings
+            CreateMap<Review, ReviewResponseDto>()
+                .ForMember(dest => dest.Reviewer, opt => opt.MapFrom(src => src.Reviewer))
+                .ForMember(dest => dest.Reviewee, opt => opt.MapFrom(src => src.Reviewee));
+
+
+                CreateMap<ReviewRequestDto, Review>()
+                    .ForMember(dest => dest.ReviewId, opt => opt.Ignore())
+                    .ForMember(dest => dest.ReviewerId, opt => opt.Ignore())
+                    .ForMember(dest => dest.Reviewer, opt => opt.Ignore())
+                    .ForMember(dest => dest.Reviewee, opt => opt.Ignore())
+                    .ForMember(dest => dest.JobPost, opt => opt.Ignore())
+                    .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                    .ForMember(dest => dest.IsDeleted, opt => opt.Ignore());
         }
     }
 }

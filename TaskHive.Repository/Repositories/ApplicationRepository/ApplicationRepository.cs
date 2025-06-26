@@ -61,5 +61,11 @@ namespace TaskHive.Repository.Repositories.ApplicationRepository
             _context.Applications.Update(application);
             return await _context.SaveChangesAsync() > 0;
         }
+        public async Task<Application?> GetByJobPostAndFreelancerAsync(int jobPostId, int freelancerId){
+            return await _context.Applications
+                    .Include(a => a.JobPost)
+                    .Include(a => a.Freelancer)
+                    .FirstOrDefaultAsync(a => a.JobPostId == jobPostId && a.FreelancerId == freelancerId && !a.IsDeleted);
+        }
     }
 }

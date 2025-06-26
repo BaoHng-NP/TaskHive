@@ -217,11 +217,13 @@ namespace TaskHive.Service.Services.UserService
 
                 // Check existing user by Google ID
                 var existingUserByGoogleId = await _unitOfWork.Users.GetByGoogleIdAsync(payload.Subject);
-
                 if (existingUserByGoogleId != null)
                 {
                     existingUserByGoogleId.FullName = payload.Name;
-                    existingUserByGoogleId.imageUrl = payload.Picture;
+                    if (string.IsNullOrEmpty(existingUserByGoogleId.imageUrl))
+                    {
+                        existingUserByGoogleId.imageUrl = payload.Picture;
+                    }
                     existingUserByGoogleId.IsEmailVerified = payload.EmailVerified;
                     existingUserByGoogleId.UpdatedAt = DateTime.UtcNow;
 
@@ -240,7 +242,10 @@ namespace TaskHive.Service.Services.UserService
                 if (existingUserByEmail != null)
                 {
                     existingUserByEmail.GoogleId = payload.Subject;
-                    existingUserByEmail.imageUrl = payload.Picture;
+                    if (string.IsNullOrEmpty(existingUserByEmail.imageUrl))
+                    {
+                        existingUserByEmail.imageUrl = payload.Picture;
+                    }
                     existingUserByEmail.IsEmailVerified = payload.EmailVerified;
                     existingUserByEmail.FullName = payload.Name;
                     existingUserByEmail.UpdatedAt = DateTime.UtcNow;

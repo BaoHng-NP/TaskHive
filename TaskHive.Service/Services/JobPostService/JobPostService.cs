@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TaskHive.Repository.Entities;
+using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Repository.UnitOfWork;
 using TaskHive.Service.DTOs.Requests.JobPost;
 using TaskHive.Service.DTOs.Responses;
@@ -87,6 +88,32 @@ namespace TaskHive.Service.Services.JobPostService
 
             await _unitOfWork.SaveChangesAsync();
             return null;
+        }
+
+        public async Task<PagedResult<JobPostResponseDto>> GetJobPostsPagedAsync(JobQueryParam param)
+        {
+            var totalCount = 0;
+            try
+            {
+                var jobPosts = await _unitOfWork.JobPosts.GetJobPostsPagedAsync(param);
+                if (jobPosts != null)
+                {
+                    totalCount = jobPosts.Count;
+                }
+                var jobPostDtos = _mapper.Map<List<JobPostResponseDto>>(jobPosts);
+
+                return new PagedResult<JobPostResponseDto>
+                {
+                    Items = jobPostDtos,
+                    TotalItems = totalCount,
+                    Page = param.Page,
+                    PageSize = param.PageSize
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("An error occurred while fetching paged job posts.", ex);
+            }
         }
     }
 }

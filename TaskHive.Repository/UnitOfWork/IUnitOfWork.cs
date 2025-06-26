@@ -5,11 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using TaskHive.Repository.Repositories;
 using TaskHive.Repository.Repositories.ApplicationRepository;
+using TaskHive.Repository.Repositories.BlogPostRepository;
 using TaskHive.Repository.Repositories.CategoryRepository;
 using TaskHive.Repository.Repositories.EmailVerificationRepository;
 using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Repository.Repositories.MembershipRepository;
 using TaskHive.Repository.Repositories.PaymentRepository;
+using TaskHive.Repository.Repositories.ReviewRepository;
 using TaskHive.Repository.Repositories.SlotPurchaseRepository;
 using TaskHive.Repository.Repositories.UserMembershipRepository;
 using TaskHive.Repository.Repositories.UserRepository;
@@ -30,6 +32,9 @@ namespace TaskHive.Repository.UnitOfWork
         IUserMembershipRepository UserMemberships { get; }
         IPaymentRepository Payments { get; }
         ISlotPurchaseRepository SlotPurchases { get; }
+        IBlogPostRepository BlogPosts { get; }
+
+        IReviewRepository Reviews { get; }
         Task<int> SaveChangesAsync();
     }
 }

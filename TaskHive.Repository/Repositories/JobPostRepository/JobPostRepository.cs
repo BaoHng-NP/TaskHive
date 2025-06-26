@@ -70,5 +70,28 @@ namespace TaskHive.Repository.Repositories.JobPostRepository
             _context.JobPosts.Update(jobPost);
             return await _context.SaveChangesAsync() > 0;
         }
+
+        public async Task<List<JobPost>> GetJobPostsPagedAsync(JobQueryParam pram)
+        {
+            var jobList = _context.JobPosts
+                .Include(j => j.Category)
+                .Include(j => j.Employer)
+                .Where(j => !j.IsDeleted);
+
+            if (!string.IsNullOrEmpty(pram.Search))
+            {
+                var searchLower = pram.Search.ToLower();
+                jobList = jobList.Where(j => j.Title.ToLower().Contains(searchLower));
+            }
+            if (pram.CategoryIds != null && pram.CategoryIds.Count > 0)
+            {
+                jobList = jobList.Where(j => pram.CategoryIds.Contains(j.CategoryId));
+            }
+            return await jobList
+                .OrderByDescending(bp => bp.Title)
+                .Skip((pram.Page - 1) * pram.PageSize)
+                .Take(pram.PageSize)
+                .ToListAsync();
+        }
     }
 }

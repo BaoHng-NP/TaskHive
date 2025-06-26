@@ -15,5 +15,7 @@ namespace TaskHive.Repository.Repositories.ApplicationRepository
         Task<bool> AddApplicationAsync(Application application);
         Task<bool> UpdateApplicationAsync(Application application);
         Task<bool> DeleteApplicationAsync(int applicationId);
+        Task<Application?> GetByJobPostAndFreelancerAsync(int jobPostId, int freelancerId);
+
     }
 }

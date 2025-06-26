@@ -4,6 +4,7 @@ using TaskHive.Service.DTOs.Requests.JobPost;
 using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.Services.JobPostService;
 using Microsoft.AspNetCore.Authorization;
+using TaskHive.Repository.Repositories.JobPostRepository;
 
 namespace TaskHive.API.Controllers
 {
@@ -92,6 +93,18 @@ namespace TaskHive.API.Controllers
         {
             var error = await _jobPostService.DeleteJobPostAsync(jobPostId);
             return error == null ? NoContent() : NotFound(error);
+        }
+
+
+        [HttpGet("paged")]
+        [ProducesResponseType(typeof(PagedResult<JobPostResponseDto>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> GetPagedJobPosts([FromQuery] JobQueryParam parameters)
+        {
+            var pagedResult = await _jobPostService.GetJobPostsPagedAsync(parameters);
+            if (pagedResult == null || pagedResult.Items == null || !pagedResult.Items.Any())
+                return NotFound("No job posts found.");
+            return Ok(pagedResult);
         }
     }
 }
