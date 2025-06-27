@@ -145,7 +145,7 @@ namespace TaskHive.Service.Services.UserService
                 await SendVerificationEmailAsync(freelancer);
 
                 var authResponse = await CreateAuthResponseAsync(freelancer);
-                authResponse.Message = "Registration successful! Please check your email to verify your account.";
+                authResponse.Message = "Registration successful! Please check your email to verify your account. If you don't see the email, please check your spam folder.";
 
                 return (authResponse, null);
             }
@@ -184,7 +184,7 @@ namespace TaskHive.Service.Services.UserService
                 await SendVerificationEmailAsync(client);
 
                 var authResponse = await CreateAuthResponseAsync(client);
-                authResponse.Message = "Registration successful! Please check your email to verify your account.";
+                authResponse.Message = "Registration successful! Please check your email to verify your account.  If you don't see the email, please check your spam folder.";
 
                 return (authResponse, null);
             }
@@ -539,12 +539,12 @@ namespace TaskHive.Service.Services.UserService
 
                 if (await _unitOfWork.EmailVerifications.HasValidTokenAsync(user.UserId))
                 {
-                    return (false, "A verification email has already been sent. Please check your inbox.");
+                    return (false, "A verification email has already been sent. Please check your inbox.  If you don't see the email, please check your spam folder.");
                 }
 
                 await SendVerificationEmailAsync(user);
 
-                return (true, "Verification email sent successfully. Please check your inbox.");
+                return (true, "Verification email sent successfully. Please check your inbox.  If you don't see the email, please check your spam folder.");
             }
             catch (Exception ex)
             {
@@ -565,7 +565,7 @@ namespace TaskHive.Service.Services.UserService
 
                 if (await _unitOfWork.EmailVerifications.HasValidPasswordResetTokenAsync(user.UserId))
                 {
-                    return (false, "A password reset email has already been sent. Please check your inbox.");
+                    return (false, "A password reset email has already been sent. Please check your inbox.  If you don't see the email, please check your spam folder.");
                 }
 
                 var token = GenerateSecureToken();

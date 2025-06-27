@@ -9,19 +9,24 @@ using TaskHive.Repository.Entities;
 using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses.User;
 using TaskHive.Service.Services.UserService;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 
 namespace TaskHive.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController: ControllerBase
+    public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
         private readonly IMapper _mapper;
-        public UserController(IUserService userService, IMapper mapper)
+        private readonly Cloudinary _cloudinary;
+
+        public UserController(IUserService userService, IMapper mapper, Cloudinary cloudinary)
         {
             _userService = userService;
             _mapper = mapper;
+            _cloudinary = cloudinary;
         }
 
         [HttpPost("register/freelancer")]
@@ -373,6 +378,42 @@ namespace TaskHive.API.Controllers
                 return BadRequest(new { message = errorMessage });
             }
             return Ok(clientProfileResponse);
+        }
+
+        [HttpPost("upload-image")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> UploadImage(IFormFile imageFile)
+        {
+            try
+            {
+                if (imageFile == null || imageFile.Length == 0)
+                {
+                    return BadRequest(new { message = "No image file provided" });
+                }
+
+                // ✅ Upload ảnh lên Cloudinary
+                var uploadParams = new ImageUploadParams
+                {
+                    File = new FileDescription(imageFile.FileName, imageFile.OpenReadStream()),
+                    PublicId = $"user-images/{Path.GetFileNameWithoutExtension(imageFile.FileName)}_{Guid.NewGuid()}",
+                };
+
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+                return Ok(new
+                {
+                    imageUrl = uploadResult.SecureUrl.ToString()
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = "Image upload failed",
+                    error = ex.Message
+                });
+            }
         }
     }
 }
