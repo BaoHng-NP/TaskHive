@@ -55,7 +55,7 @@ namespace TaskHive.Repository.Repositories.BlogPostRepository
                 .FirstOrDefaultAsync(bp => bp.BlogpostId == id && !bp.IsDeleted);
         }
 
-        public async Task<List<BlogPost>> GetPagedAsync(PostQueryParam parameters)
+        public async Task<(List<BlogPost> BlogPosts, int TotalCount)> GetPagedAsync(PostQueryParam parameters)
         {
             var query = _context.BlogPosts
                 .Include(bp => bp.Author)
@@ -73,12 +73,14 @@ namespace TaskHive.Repository.Repositories.BlogPostRepository
                 else
                     query = query.Where(bp => bp.PublishedAt == null);
             }
-
-            return await query
+            int totalCount = await query.CountAsync();
+            var blogPosts = await query
                 .OrderByDescending(bp => bp.Title)
                 .Skip((parameters.Page - 1) * parameters.PageSize)
                 .Take(parameters.PageSize)
                 .ToListAsync();
+
+            return (blogPosts, totalCount);
         }
 
         public async Task UpdateAsync(BlogPost blogPost)

@@ -92,14 +92,10 @@ namespace TaskHive.Service.Services.JobPostService
 
         public async Task<PagedResult<JobPostResponseDto>> GetJobPostsPagedAsync(JobQueryParam param)
         {
-            var totalCount = 0;
             try
             {
-                var jobPosts = await _unitOfWork.JobPosts.GetJobPostsPagedAsync(param);
-                if (jobPosts != null)
-                {
-                    totalCount = jobPosts.Count;
-                }
+                var (jobPosts,totalCount) = await _unitOfWork.JobPosts.GetJobPostsPagedAsync(param);
+
                 var jobPostDtos = _mapper.Map<List<JobPostResponseDto>>(jobPosts);
 
                 return new PagedResult<JobPostResponseDto>

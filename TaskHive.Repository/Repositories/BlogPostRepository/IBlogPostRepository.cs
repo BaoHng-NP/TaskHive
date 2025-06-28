@@ -16,6 +16,7 @@ namespace TaskHive.Repository.Repositories.BlogPostRepository
         Task CreateAsync(BlogPost blogPost);
         Task UpdateAsync(BlogPost blogPost);
         Task<bool> DeleteAsync(int id);
-        Task<List<BlogPost>> GetPagedAsync(PostQueryParam parameters);
+        Task<(List<BlogPost> BlogPosts, int TotalCount)> GetPagedAsync(PostQueryParam parameters);
+
     }
 }

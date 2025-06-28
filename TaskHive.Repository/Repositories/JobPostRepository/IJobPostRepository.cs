@@ -16,6 +16,6 @@ namespace TaskHive.Repository.Repositories.JobPostRepository
         Task<bool> AddJobPostAsync(JobPost jobPost);
         Task<bool> UpdateJobPostAsync(JobPost jobPost);
         Task<bool> DeleteJobPostAsync(int jobPostId);
-        Task<List<JobPost>> GetJobPostsPagedAsync(JobQueryParam pram);
+        Task<(List<JobPost>, int TotalCount)> GetJobPostsPagedAsync(JobQueryParam pram);
     }
 }

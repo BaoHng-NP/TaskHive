@@ -26,14 +26,10 @@ namespace TaskHive.Service.Services.BlogPostService
 
         public async Task<PagedResult<BlogPostResponseDto>> GetPagedBlogPostsAsync(PostQueryParam parameters)
         {
-            var totalCount = 0;
             try
             {
-                var blogPosts = await _unitOfWork.BlogPosts.GetPagedAsync(parameters);
-                if (blogPosts != null)
-                {
-                    totalCount = blogPosts.Count;
-                }
+                var (blogPosts,totalCount) = await _unitOfWork.BlogPosts.GetPagedAsync(parameters);
+
                 var blogPostDtos = _mapper.Map<List<BlogPostResponseDto>>(blogPosts);
 
                 return new PagedResult<BlogPostResponseDto>

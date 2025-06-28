@@ -71,7 +71,7 @@ namespace TaskHive.Repository.Repositories.JobPostRepository
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<JobPost>> GetJobPostsPagedAsync(JobQueryParam pram)
+        public async Task<(List<JobPost>,int TotalCount)> GetJobPostsPagedAsync(JobQueryParam pram)
         {
             var jobList = _context.JobPosts
                 .Include(j => j.Category)
@@ -87,11 +87,14 @@ namespace TaskHive.Repository.Repositories.JobPostRepository
             {
                 jobList = jobList.Where(j => pram.CategoryIds.Contains(j.CategoryId));
             }
-            return await jobList
+            int totalCount = await jobList.CountAsync();
+
+            var jobs= await jobList
                 .OrderByDescending(bp => bp.Title)
                 .Skip((pram.Page - 1) * pram.PageSize)
                 .Take(pram.PageSize)
                 .ToListAsync();
+            return (jobs, totalCount);
         }
     }
 }
