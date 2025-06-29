@@ -47,6 +47,21 @@ namespace TaskHive.Repository.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SlotPurchases",
+                columns: table => new
+                {
+                    SlotPurchaseId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SlotPurchases", x => x.SlotPurchaseId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
@@ -58,6 +73,7 @@ namespace TaskHive.Repository.Migrations
                     GoogleId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     imageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Country = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Role = table.Column<int>(type: "int", nullable: false),
                     IsEmailVerified = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -121,6 +137,31 @@ namespace TaskHive.Repository.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "EmailVerificationTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    Token = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsUsed = table.Column<bool>(type: "bit", nullable: false),
+                    IsPasswordReset = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmailVerificationTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EmailVerificationTokens_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "JobPosts",
                 columns: table => new
                 {
@@ -158,26 +199,64 @@ namespace TaskHive.Repository.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "SlotPurchases",
+                name: "Payments",
                 columns: table => new
                 {
-                    SlotPurchaseId = table.Column<int>(type: "int", nullable: false)
+                    PaymentId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
-                    PurchasedSlots = table.Column<int>(type: "int", nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    PurchasedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PaymentType = table.Column<int>(type: "int", nullable: false),
+                    MembershipId = table.Column<int>(type: "int", nullable: true),
+                    SlotPurchaseId = table.Column<int>(type: "int", nullable: true),
+                    SlotQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SlotPurchases", x => x.SlotPurchaseId);
+                    table.PrimaryKey("PK_Payments", x => x.PaymentId);
                     table.ForeignKey(
-                        name: "FK_SlotPurchases_Users_UserId",
+                        name: "FK_Payments_Memberships_MembershipId",
+                        column: x => x.MembershipId,
+                        principalTable: "Memberships",
+                        principalColumn: "MembershipId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Payments_SlotPurchases_SlotPurchaseId",
+                        column: x => x.SlotPurchaseId,
+                        principalTable: "SlotPurchases",
+                        principalColumn: "SlotPurchaseId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Payments_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "UserId",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    Token = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRevoked = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -190,7 +269,6 @@ namespace TaskHive.Repository.Migrations
                     MembershipId = table.Column<int>(type: "int", nullable: false),
                     StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    RemainingSlots = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -279,7 +357,8 @@ namespace TaskHive.Repository.Migrations
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CVFile = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AppliedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -330,43 +409,6 @@ namespace TaskHive.Repository.Migrations
                     table.ForeignKey(
                         name: "FK_Reviews_Users_ReviewerId",
                         column: x => x.ReviewerId,
-                        principalTable: "Users",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Payments",
-                columns: table => new
-                {
-                    PaymentId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<int>(type: "int", nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    PaymentType = table.Column<int>(type: "int", nullable: false),
-                    MembershipId = table.Column<int>(type: "int", nullable: true),
-                    SlotPurchaseId = table.Column<int>(type: "int", nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Payments", x => x.PaymentId);
-                    table.ForeignKey(
-                        name: "FK_Payments_Memberships_MembershipId",
-                        column: x => x.MembershipId,
-                        principalTable: "Memberships",
-                        principalColumn: "MembershipId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Payments_SlotPurchases_SlotPurchaseId",
-                        column: x => x.SlotPurchaseId,
-                        principalTable: "SlotPurchases",
-                        principalColumn: "SlotPurchaseId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Payments_Users_UserId",
-                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "UserId",
                         onDelete: ReferentialAction.Restrict);
@@ -435,6 +477,17 @@ namespace TaskHive.Repository.Migrations
                 column: "CreatedBy");
 
             migrationBuilder.CreateIndex(
+                name: "IX_EmailVerificationTokens_Token",
+                table: "EmailVerificationTokens",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmailVerificationTokens_UserId_Email",
+                table: "EmailVerificationTokens",
+                columns: new[] { "UserId", "Email" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_JobPosts_CategoryId",
                 table: "JobPosts",
                 column: "CategoryId");
@@ -470,6 +523,17 @@ namespace TaskHive.Repository.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_Token",
+                table: "RefreshTokens",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId_IsRevoked",
+                table: "RefreshTokens",
+                columns: new[] { "UserId", "IsRevoked" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Reviews_JobPostId",
                 table: "Reviews",
                 column: "JobPostId");
@@ -483,11 +547,6 @@ namespace TaskHive.Repository.Migrations
                 name: "IX_Reviews_ReviewerId",
                 table: "Reviews",
                 column: "ReviewerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SlotPurchases_UserId",
-                table: "SlotPurchases",
-                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserMemberships_MembershipId",
@@ -518,7 +577,13 @@ namespace TaskHive.Repository.Migrations
                 name: "ConversationMembers");
 
             migrationBuilder.DropTable(
+                name: "EmailVerificationTokens");
+
+            migrationBuilder.DropTable(
                 name: "Payments");
+
+            migrationBuilder.DropTable(
+                name: "RefreshTokens");
 
             migrationBuilder.DropTable(
                 name: "Reviews");

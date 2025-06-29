@@ -12,8 +12,8 @@ using TaskHive.Repository;
 namespace TaskHive.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250612155622_EmailVerificationToken")]
-    partial class EmailVerificationToken
+    [Migration("20250627070503_CreateDB")]
+    partial class CreateDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,6 +57,9 @@ namespace TaskHive.Repository.Migrations
 
                     b.Property<string>("Status")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("ApplicationId");
 
@@ -191,6 +194,9 @@ namespace TaskHive.Repository.Migrations
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPasswordReset")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsUsed")
                         .HasColumnType("bit");
@@ -376,6 +382,9 @@ namespace TaskHive.Repository.Migrations
                     b.Property<int?>("SlotPurchaseId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("SlotQuantity")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -391,6 +400,41 @@ namespace TaskHive.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("TaskHive.Repository.Entities.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "IsRevoked");
+
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("TaskHive.Repository.Entities.Review", b =>
@@ -441,6 +485,9 @@ namespace TaskHive.Repository.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SlotPurchaseId"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -448,18 +495,7 @@ namespace TaskHive.Repository.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime>("PurchasedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("PurchasedSlots")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
                     b.HasKey("SlotPurchaseId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("SlotPurchases");
                 });
@@ -473,7 +509,6 @@ namespace TaskHive.Repository.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
 
                     b.Property<string>("Country")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -537,9 +572,6 @@ namespace TaskHive.Repository.Migrations
                         .HasColumnType("bit");
 
                     b.Property<int>("MembershipId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RemainingSlots")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("StartDate")
@@ -748,6 +780,17 @@ namespace TaskHive.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TaskHive.Repository.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("TaskHive.Repository.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TaskHive.Repository.Entities.Review", b =>
                 {
                     b.HasOne("TaskHive.Repository.Entities.JobPost", "JobPost")
@@ -773,17 +816,6 @@ namespace TaskHive.Repository.Migrations
                     b.Navigation("Reviewee");
 
                     b.Navigation("Reviewer");
-                });
-
-            modelBuilder.Entity("TaskHive.Repository.Entities.SlotPurchase", b =>
-                {
-                    b.HasOne("TaskHive.Repository.Entities.Freelancer", "User")
-                        .WithMany("SlotPurchases")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TaskHive.Repository.Entities.UserMembership", b =>
@@ -889,8 +921,6 @@ namespace TaskHive.Repository.Migrations
                     b.Navigation("Memberships");
 
                     b.Navigation("Payments");
-
-                    b.Navigation("SlotPurchases");
 
                     b.Navigation("UserSkills");
                 });
