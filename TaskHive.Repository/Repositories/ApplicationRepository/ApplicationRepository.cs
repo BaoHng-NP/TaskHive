@@ -28,6 +28,7 @@ namespace TaskHive.Repository.Repositories.ApplicationRepository
         {
             return await _context.Applications
                 .Include(a => a.Freelancer)
+                .Include(a => a.JobPost)
                 .Where(a => a.JobPostId == jobPostId && !a.IsDeleted)
                 .ToListAsync();
         }
@@ -35,6 +36,7 @@ namespace TaskHive.Repository.Repositories.ApplicationRepository
         public async Task<List<Application>> GetApplicationsByFreelancerIdAsync(int freelancerId)
         {
             return await _context.Applications
+                .Include(a => a.Freelancer)
                 .Include(a => a.JobPost)
                 .Where(a => a.FreelancerId == freelancerId && !a.IsDeleted)
                 .ToListAsync();

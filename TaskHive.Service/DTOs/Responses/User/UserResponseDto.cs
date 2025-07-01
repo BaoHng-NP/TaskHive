@@ -29,6 +29,7 @@ namespace TaskHive.Service.DTOs.Responses.User
         public string Email { get; set; } = null!;
         public string FullName { get; set; }
         public string? UserName { get; set; }
+        public int RemainingSlots { get; set; }
         public string? CVFile { get; set; }
         public string? PortfolioUrl { get; set; }
         public string? Country { get; set; }
