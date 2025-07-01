@@ -20,6 +20,18 @@ namespace TaskHive.API.Controllers
             _jobPostService = jobPostService;
         }
 
+        // ✅ Add new endpoint with ratings using Projection
+        [HttpGet("paged-with-ratings")]
+        [ProducesResponseType(typeof(PagedResult<JobPostWithRatingResponseDto>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> GetPagedJobPostsWithRatings([FromQuery] JobQueryParam parameters)
+        {
+            var pagedResult = await _jobPostService.GetJobPostsWithRatingsPagedAsync(parameters);
+            if (pagedResult == null || pagedResult.Items == null || !pagedResult.Items.Any())
+                return NotFound("No job posts found.");
+            return Ok(pagedResult);
+        }
+
         [HttpGet("{jobPostId}")]
         [ProducesResponseType(typeof(JobPostResponseDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]

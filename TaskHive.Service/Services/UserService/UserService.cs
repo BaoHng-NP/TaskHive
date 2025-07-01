@@ -787,5 +787,7 @@ namespace TaskHive.Service.Services.UserService
                 return (null, $"Failed to update client profile: {ex.Message}");
             }
         }
+
+        
     }
 }

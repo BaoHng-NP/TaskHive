@@ -20,5 +20,6 @@ namespace TaskHive.Service.Services.JobPostService
         Task<string?> DeleteJobPostAsync(int jobPostId);
 
         Task<PagedResult<JobPostResponseDto>> GetJobPostsPagedAsync(JobQueryParam parameters);
+        Task<PagedResult<JobPostWithRatingResponseDto>> GetJobPostsWithRatingsPagedAsync(JobQueryParam param);
     }
 }

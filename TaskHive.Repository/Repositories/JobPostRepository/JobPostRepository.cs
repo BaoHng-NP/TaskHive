@@ -16,6 +16,13 @@ namespace TaskHive.Repository.Repositories.JobPostRepository
             _context = context;
         }
 
+        // ✅ Add new method for Projection
+        public IQueryable<JobPost> GetJobPostsQueryable()
+        {
+            return _context.JobPosts.Where(j => !j.IsDeleted);
+        }
+
+        // ✅ Keep all existing methods unchanged
         public async Task<JobPost?> GetJobPostByIdAsync(int jobPostId)
         {
             return await _context.JobPosts
@@ -71,29 +78,32 @@ namespace TaskHive.Repository.Repositories.JobPostRepository
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<(List<JobPost>,int TotalCount)> GetJobPostsPagedAsync(JobQueryParam pram)
+        public async Task<(List<JobPost>, int TotalCount)> GetJobPostsPagedAsync(JobQueryParam param)
         {
             var jobList = _context.JobPosts
                 .Include(j => j.Category)
                 .Include(j => j.Employer)
                 .Where(j => !j.IsDeleted);
 
-            if (!string.IsNullOrEmpty(pram.Search))
+            if (!string.IsNullOrEmpty(param.Search))
             {
-                var searchLower = pram.Search.ToLower();
+                var searchLower = param.Search.ToLower();
                 jobList = jobList.Where(j => j.Title.ToLower().Contains(searchLower));
             }
-            if (pram.CategoryIds != null && pram.CategoryIds.Count > 0)
+
+            if (param.CategoryIds != null && param.CategoryIds.Count > 0)
             {
-                jobList = jobList.Where(j => pram.CategoryIds.Contains(j.CategoryId));
+                jobList = jobList.Where(j => param.CategoryIds.Contains(j.CategoryId));
             }
+
             int totalCount = await jobList.CountAsync();
 
-            var jobs= await jobList
-                .OrderByDescending(bp => bp.Title)
-                .Skip((pram.Page - 1) * pram.PageSize)
-                .Take(pram.PageSize)
+            var jobs = await jobList
+                .OrderByDescending(bp => bp.CreatedAt)
+                .Skip((param.Page - 1) * param.PageSize)
+                .Take(param.PageSize)
                 .ToListAsync();
+
             return (jobs, totalCount);
         }
     }
