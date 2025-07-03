@@ -134,10 +134,9 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
-if (app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+
+app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
