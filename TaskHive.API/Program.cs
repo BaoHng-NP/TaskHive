@@ -32,16 +32,20 @@ builder.Services.AddSingleton(sp => {
     return new Cloudinary(new Account(c.CloudName, c.ApiKey, c.ApiSecret));
 });
 
-// --- 3) CORS: chỉ 1 policy, cho phép FE và credentials ---
+// --- 3) CORS: Cho phép FE local và FE deploy (Vercel) truy cập với credentials ---
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173")  // FE origin
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials()
+        policy.WithOrigins(
+            "http://localhost:5173", // local dev
+            "https://taskhive-freelancer-9bd0pi088-baogiadev18s-projects.vercel.app/" // thay bằng domain Vercel thật
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
     );
 });
+
 
 // --- 4) SignalR & Controllers & EF & DI & Swagger ---
 builder.Services.AddSignalR();
