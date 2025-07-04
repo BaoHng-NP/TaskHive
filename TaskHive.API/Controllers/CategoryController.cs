@@ -28,6 +28,7 @@ namespace TaskHive.API.Controllers
         }
 
         [HttpGet]
+        [HttpHead]
         [ProducesResponseType(typeof(List<CategoryResponseDto>), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetAllCategories()
         {
