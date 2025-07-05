@@ -131,18 +131,18 @@ namespace TaskHive.Service.Services.ReviewService
                 }
 
                 // ✅ Business Rule 3: Không được review cho job post mình đăng
-                var jobPost = await _unitOfWork.JobPosts.GetJobPostByIdAsync(request.JobPostId);
-                if (jobPost == null)
-                {
-                    Console.WriteLine("Job post not found");
-                    return null;
-                }
+                //var jobPost = await _unitOfWork.JobPosts.GetJobPostByIdAsync(request.JobPostId);
+                //if (jobPost == null)
+                //{
+                //    Console.WriteLine("Job post not found");
+                //    return null;
+                //}
 
-                if (jobPost.EmployerId == reviewerId)
-                {
-                    Console.WriteLine("Cannot review your own job post");
-                    return null;
-                }
+                //if (jobPost.EmployerId == reviewerId)
+                //{
+                //    Console.WriteLine("Cannot review your own job post");
+                //    return null;
+                //}
 
                 // ✅ Business Rule 4: Application phải ở trạng thái "Finished"
                 var canReview = await CanUserReviewAsync(reviewerId, request.RevieweeId, request.JobPostId);
