@@ -9,6 +9,7 @@ using TaskHive.Service.DTOs.Requests.Payment;
 using TaskHive.Service.DTOs.Requests.UserMembership;
 using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.Services.UserMembershipService;
+using TaskHive.Service.Services.UserService;
 
 
 namespace TaskHive.Service.Services.PaymentService
@@ -19,13 +20,15 @@ namespace TaskHive.Service.Services.PaymentService
         private readonly IMapper _mapper;
         private readonly PayOS _payOs;
         private readonly IUserMembershipService _userMembershipService;
+        private readonly IUserService _userService;
 
-        public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, PayOS payOs, IUserMembershipService userMembershipService)
+        public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, PayOS payOs, IUserMembershipService userMembershipService, IUserService userService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _payOs = payOs;
             _userMembershipService = userMembershipService;
+            _userService = userService;
         }
 
         public async Task<(PaymentResponseDto? payment, string? error)> AddPaymentWithMembershipAsync(AddPaymentWithMembershipRequestDto dto)
@@ -83,9 +86,11 @@ namespace TaskHive.Service.Services.PaymentService
         {
             var payment = _mapper.Map<Payment>(dto);
             payment.MembershipId = null;
+            var slotQuantity = (int)(dto.SlotQuantity ?? 0);
 
             var success = await _unitOfWork.Payments.AddPaymentAsync(payment);
             if (!success) return (null, "Failed to create payment");
+            var updatedSlotPurchase = await _userService.UpdateRemainingSlotAsync(dto.UserId, slotQuantity);
 
             await _unitOfWork.SaveChangesAsync();
 
