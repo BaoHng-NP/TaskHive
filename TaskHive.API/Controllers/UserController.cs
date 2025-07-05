@@ -372,6 +372,22 @@ namespace TaskHive.API.Controllers
             return Ok(freelancerProfileResponse);
         }
 
+        [HttpPut("RemainingSlot/{userId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateFreelancerProfile(int userId, int updateSlot)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var (freelancerProfileResponse, errorMessage) = await _userService.UpdateRemainingSlotAsync(userId, updateSlot);
+            if (errorMessage != null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+            return Ok(freelancerProfileResponse);
+        }
+
 
         [HttpPut("client/{userId}")]
         public async Task<IActionResult> UpdateClientProfile(int userId, ClientProfileDto model)

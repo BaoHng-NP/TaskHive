@@ -802,6 +802,34 @@ namespace TaskHive.Service.Services.UserService
             }
         }
 
-        
+
+        public async Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateRemainingSlotAsync(int userId, int UpdateSlot)
+        {
+            try
+            {
+                var freelancer = await _unitOfWork.Users.GetFreelancerByIdAsync(userId);
+                if (freelancer == null)
+                {
+                    return (null, "User not found.");
+                }
+
+                freelancer.RemainingSlots = UpdateSlot;
+
+                freelancer.UpdatedAt = DateTime.UtcNow;
+                await _unitOfWork.Users.UpdateAsync(freelancer);
+                await _unitOfWork.SaveChangesAsync();
+
+                FreelancerProfileResponseDto response = new();
+                _mapper.Map(freelancer, response);
+
+
+                return (response, null);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Failed to update remaining slot profile: {ex.Message}");
+            }
+        }
+
     }
 }

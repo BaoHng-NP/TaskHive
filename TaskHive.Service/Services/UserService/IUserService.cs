@@ -39,5 +39,7 @@ namespace TaskHive.Service.Services.UserService
         Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateFreelancerProfileAsync(int userId, FreelancerProfileDto model);
 
         Task<(ClientProfileResponseDto? clientProfileResponse, string? errorMessage)> UpdateClientProfileAsync(int userId, ClientProfileDto model);
+        Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateRemainingSlotAsync(int userId, int UpdateSlot);
+
     }
 }
