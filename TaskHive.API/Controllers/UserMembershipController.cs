@@ -67,5 +67,14 @@ namespace TaskHive.API.Controllers
             if (error != null) return BadRequest(error);
             return NoContent();
         }
+        [HttpGet("active/{userId}")]
+        [ProducesResponseType(typeof(IEnumerable<UserMembershipResponseDto>), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> GetActiveByUser([FromRoute] int userId)
+        {
+            var list = await _service.GetActiveMembershipsByUserAsync(userId);
+
+            // Trả về 200 OK, body là mảng (có thể rỗng nếu user không có membership nào active)
+            return Ok(list);
+        }
     }
 }

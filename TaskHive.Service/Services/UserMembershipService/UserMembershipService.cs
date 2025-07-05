@@ -60,5 +60,14 @@ namespace TaskHive.Service.Services.UserMembershipService
             await _unitOfWork.SaveChangesAsync();
             return null;
         }
+        public async Task<IEnumerable<UserMembershipResponseDto>> GetActiveMembershipsByUserAsync(int userId)
+        {
+            // Giả sử repository đã có FindAsync
+            var entities = await _unitOfWork.UserMemberships
+                              .FindAsync(um => um.UserId == userId && um.IsActive);
+
+            // Map về DTO và trả về
+            return _mapper.Map<IEnumerable<UserMembershipResponseDto>>(entities);
+        }
     }
 }

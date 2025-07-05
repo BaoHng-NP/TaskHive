@@ -6,7 +6,9 @@ using System.Linq;
 using TaskHive.Repository.Entities;
 using TaskHive.Repository.UnitOfWork;
 using TaskHive.Service.DTOs.Requests.Payment;
+using TaskHive.Service.DTOs.Requests.UserMembership;
 using TaskHive.Service.DTOs.Responses;
+using TaskHive.Service.Services.UserMembershipService;
 
 
 namespace TaskHive.Service.Services.PaymentService
@@ -16,27 +18,66 @@ namespace TaskHive.Service.Services.PaymentService
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly PayOS _payOs;
+        private readonly IUserMembershipService _userMembershipService;
 
-        public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, PayOS payOs)
+        public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, PayOS payOs, IUserMembershipService userMembershipService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _payOs = payOs;
+            _userMembershipService = userMembershipService;
         }
 
         public async Task<(PaymentResponseDto? payment, string? error)> AddPaymentWithMembershipAsync(AddPaymentWithMembershipRequestDto dto)
         {
+            // 1. Tạo payment như bình thường
             var payment = _mapper.Map<Payment>(dto);
             payment.SlotPurchaseId = null;
             payment.SlotQuantity = null;
 
-            var success = await _unitOfWork.Payments.AddPaymentAsync(payment);
-            if (!success) return (null, "Failed to create payment");
+            var paymentCreated = await _unitOfWork.Payments.AddPaymentAsync(payment);
+            if (!paymentCreated)
+                return (null, "Failed to create payment");
 
             await _unitOfWork.SaveChangesAsync();
 
-            return (_mapper.Map<PaymentResponseDto>(payment), null);
+            // 2. Xử lý UserMembership
+            // a) Lấy danh sách memberships đang active của user
+            var existingMemberships = await _unitOfWork.UserMemberships
+                .FindAsync(um => um.UserId == dto.UserId && um.IsActive);
+
+            // b) Nếu có thì đặt isActive = false cho tất cả bản ghi cũ
+            if (existingMemberships.Any())
+            {
+                foreach (var old in existingMemberships)
+                {
+                    old.IsActive = false;
+                    await _unitOfWork.UserMemberships.UpdateUserMembershipAsync(old);
+                }
+                // sau khi update, SaveChangesAsync
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // c) Tạo bản ghi mới cho UserMembership
+            var userMembershipDto = new AddUserMembershipRequestDto
+            {
+                UserId = dto.UserId,
+                MembershipId = dto.MembershipId,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(1), // hoặc tính theo membership.Duration
+                RemainingSlots = 0,                       // hoặc số connects mặc định
+                IsActive = true
+            };
+
+            var (addedUm, umError) = await _userMembershipService.AddUserMembershipAsync(userMembershipDto);
+            if (umError != null)
+                return (null, $"Payment created but failed to add membership: {umError}");
+
+            // 3. Map và trả về kết quả
+            var resultDto = _mapper.Map<PaymentResponseDto>(payment);
+            return (resultDto, null);
         }
+
 
         public async Task<(PaymentResponseDto? payment, string? error)> AddPaymentWithSlotAsync(AddPaymentWithSlotRequestDto dto)
         {

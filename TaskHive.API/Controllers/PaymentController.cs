@@ -21,10 +21,13 @@ namespace TaskHive.API.Controllers
 
         [HttpPost("membership")]
         [ProducesResponseType(typeof(PaymentResponseDto), (int)HttpStatusCode.Created)]
-        public async Task<IActionResult> AddMembershipPayment(AddPaymentWithMembershipRequestDto dto)
+        [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
+        public async Task<IActionResult> AddMembershipPayment([FromBody] AddPaymentWithMembershipRequestDto dto)
         {
             var (payment, error) = await _paymentService.AddPaymentWithMembershipAsync(dto);
-            if (error != null) return BadRequest(error);
+            if (error != null)
+                return BadRequest(new { message = error });
+
             return CreatedAtAction(nameof(GetAllPayments), new { }, payment);
         }
 

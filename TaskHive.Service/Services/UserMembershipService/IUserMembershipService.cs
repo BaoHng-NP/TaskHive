@@ -10,5 +10,6 @@ namespace TaskHive.Service.Services.UserMembershipService
         Task<(UserMembershipResponseDto?, string?)> AddUserMembershipAsync(AddUserMembershipRequestDto dto);
         Task<(UserMembershipResponseDto?, string?)> UpdateUserMembershipAsync(UpdateUserMembershipRequestDto dto);
         Task<string?> DeleteUserMembershipAsync(int id);
+        Task<IEnumerable<UserMembershipResponseDto>> GetActiveMembershipsByUserAsync(int userId);
     }
 }

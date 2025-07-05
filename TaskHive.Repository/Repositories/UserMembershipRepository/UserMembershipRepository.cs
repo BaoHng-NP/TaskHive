@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using TaskHive.Repository.Entities;
 
 namespace TaskHive.Repository.Repositories.UserMembershipRepository
@@ -45,6 +46,14 @@ namespace TaskHive.Repository.Repositories.UserMembershipRepository
             return await _context.UserMemberships
                 .Include(x => x.User)
                 .Include(x => x.Membership)
+                .ToListAsync();
+        }
+        public async Task<List<UserMembership>> FindAsync(Expression<Func<UserMembership, bool>> predicate)
+        {
+            return await _context.UserMemberships
+                .Include(x => x.User)
+                .Include(x => x.Membership)
+                .Where(predicate)
                 .ToListAsync();
         }
     }
