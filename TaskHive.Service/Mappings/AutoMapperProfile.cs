@@ -10,6 +10,7 @@ using TaskHive.Service.DTOs.Requests.Payment;
 using TaskHive.Service.DTOs.Requests.Review;
 using TaskHive.Service.DTOs.Requests.SlotPurchase;
 using TaskHive.Service.DTOs.Requests.User;
+using TaskHive.Service.DTOs.Requests.UserMembership;
 using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.DTOs.Responses.BlogPost;
 using TaskHive.Service.DTOs.Responses.User;
@@ -80,6 +81,9 @@ namespace TaskHive.Service.Mappings
             CreateMap<ClientProfileDto, User>();
             CreateMap<ClientProfileDto, Client>();
             CreateMap<User, UserResponseDto>();
+            CreateMap<AddUserMembershipRequestDto, UserMembership>();
+            CreateMap<UpdateUserMembershipRequestDto, UserMembership>();
+            CreateMap<UserMembership, UserMembershipResponseDto>();
 
             // Direct mapping from derived entities to response DTOs
             CreateMap<Freelancer, FreelancerProfileResponseDto>()
