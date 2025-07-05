@@ -32,9 +32,9 @@ namespace TaskHive.Service.Services.UserService
         Task<(AuthResponseDto? authResponse, string? errorMessage)> RefreshTokenAsync(RefreshTokenRequestDto model);
         Task<bool> LogoutAsync(int userId);
 
-        Task<Freelancer?> GetFreelancerByIdAsync(int userId);
+        Task<(Freelancer? Freelancer, int Count, double AverageRating)> GetFreelancerByIdAsync(int userId);
 
-        Task<Client?> GetClientByIdAsync(int userId);
+        Task<(Client? Client, int Count, double AverageRating)> GetClientByIdAsync(int userId);
 
         Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateFreelancerProfileAsync(int userId, FreelancerProfileDto model);
 

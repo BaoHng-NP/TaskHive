@@ -14,6 +14,7 @@ using Google.Apis.Auth;
 using TaskHive.Service.Services.EmailService;
 using TaskHive.Service.DTOs.Responses.User;
 using AutoMapper;
+using TaskHive.Repository.Repositories.ReviewRepository;
 
 namespace TaskHive.Service.Services.UserService
 {
@@ -23,12 +24,15 @@ namespace TaskHive.Service.Services.UserService
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly IMapper _mapper;
-        public UserService(IUnitOfWork unitOfWork, IConfiguration configuration, IEmailService emailService, IMapper mapper)
+        private readonly IReviewRepository _reviewRepository;
+
+        public UserService(IUnitOfWork unitOfWork, IConfiguration configuration, IEmailService emailService, IMapper mapper, IReviewRepository reviewRepository) 
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
             _emailService = emailService;
             _mapper = mapper;
+            _reviewRepository = reviewRepository;
         }
 
         // Generate refresh token
@@ -710,13 +714,23 @@ namespace TaskHive.Service.Services.UserService
 
         //User CRUD
 
-        public async Task<Freelancer?> GetFreelancerByIdAsync(int userId)
+        public async Task<(Freelancer? Freelancer, int Count, double AverageRating)> GetFreelancerByIdAsync(int userId)
         {
-            return await _unitOfWork.Users.GetFreelancerByIdAsync(userId);
+            var reviews = await _reviewRepository.GetByRevieweeIdAsync(userId);
+            int count = reviews.Count;
+            double averageRating = count > 0 ? reviews.Average(r => r.Rating) : 0.0;
+
+            var freelancer = await _unitOfWork.Users.GetFreelancerByIdAsync(userId);
+
+            return (freelancer, count, averageRating);
         }
-        public async Task<Client?> GetClientByIdAsync(int userId)
+        public async Task<(Client? Client, int Count, double AverageRating)> GetClientByIdAsync(int userId)
         {
-            return await _unitOfWork.Users.GetClientByIdAsync(userId);
+            var reviews = await _reviewRepository.GetByRevieweeIdAsync(userId);
+            int count = reviews.Count;
+            double averageRating = count > 0 ? reviews.Average(r => r.Rating) : 0.0;
+            var client = await _unitOfWork.Users.GetClientByIdAsync(userId);
+            return (client, count, averageRating);
         }
 
         public async Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateFreelancerProfileAsync(int userId, FreelancerProfileDto model)

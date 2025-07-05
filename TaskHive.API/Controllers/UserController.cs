@@ -284,14 +284,14 @@ namespace TaskHive.API.Controllers
             {
                 if (string.Equals(userRole, "Freelancer", StringComparison.OrdinalIgnoreCase))
                 {
-                    var freelancer = await _userService.GetFreelancerByIdAsync(userIdInt);
+                    var (freelancer,count,average) = await _userService.GetFreelancerByIdAsync(userIdInt);
                     if (freelancer == null) return NotFound(new { message = "User not found" });
                     var response = _mapper.Map<FreelancerProfileResponseDto>(freelancer);
                     return Ok(response);
                 }
                 else if (string.Equals(userRole, "Client", StringComparison.OrdinalIgnoreCase))
                 {
-                    var client = await _userService.GetClientByIdAsync(userIdInt);
+                    var (client,count,average) = await _userService.GetClientByIdAsync(userIdInt);
                     if (client == null) return NotFound(new { message = "User not found" });
                     var response = _mapper.Map<ClientProfileResponseDto>(client);
                     return Ok(response);
@@ -311,16 +311,19 @@ namespace TaskHive.API.Controllers
         [HttpGet("freelancer/{userId}")]
         //[Authorize(Roles = "Freelancer,Admin")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-
         public async Task<IActionResult> GetFreelancerProfile(int userId)
         {
             try
             {
-                var freelancer = await _userService.GetFreelancerByIdAsync(userId);
+                var (freelancer, count, average) = await _userService.GetFreelancerByIdAsync(userId);
                 if (freelancer == null) return NotFound(new { message = $"Cannot fetch user profile" });
                 var response = _mapper.Map<FreelancerProfileResponseDto>(freelancer);
-                return Ok(response);
-
+                return Ok(new
+                {
+                    profile = response,
+                    count,
+                    average
+                });
             }
             catch (Exception ex)
             {
@@ -337,10 +340,15 @@ namespace TaskHive.API.Controllers
         {
             try
             {
-                var client = await _userService.GetClientByIdAsync(userId);
+                var (client, count, average) = await _userService.GetClientByIdAsync(userId);
                 if (client == null) return NotFound(new { message = $"Cannot fetch user profile" });
                 var response = _mapper.Map<ClientProfileResponseDto>(client);
-                return Ok(response);
+                return Ok(new
+                {
+                    profile = response,
+                    count,
+                    average
+                });
             }
             catch (Exception ex)
             {
