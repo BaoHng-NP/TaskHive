@@ -26,7 +26,7 @@ namespace TaskHive.Service.Services.UserService
         private readonly IMapper _mapper;
         private readonly IReviewRepository _reviewRepository;
 
-        public UserService(IUnitOfWork unitOfWork, IConfiguration configuration, IEmailService emailService, IMapper mapper, IReviewRepository reviewRepository) 
+        public UserService(IUnitOfWork unitOfWork, IConfiguration configuration, IEmailService emailService, IMapper mapper, IReviewRepository reviewRepository)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
@@ -470,7 +470,7 @@ namespace TaskHive.Service.Services.UserService
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(30),
+                Expires = DateTime.UtcNow.AddHours(24),
                 Issuer = jwtIssuer,
                 Audience = jwtAudience,
                 SigningCredentials = credentials
