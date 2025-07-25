@@ -17,7 +17,7 @@ namespace TaskHive.Service.Services.ReviewService
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private const int PLATFORM_REVIEWEE_ID = 19; 
-        private const int PLATFORM_JOB_POST_ID = 17; 
+        private const int PLATFORM_JOB_POST_ID = 13; 
 
         public ReviewService(IUnitOfWork unitOfWork, IMapper mapper)
         {
