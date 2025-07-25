@@ -16,6 +16,8 @@ namespace TaskHive.Service.Services.ReviewService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private const int PLATFORM_REVIEWEE_ID = 19; 
+        private const int PLATFORM_JOB_POST_ID = 17; 
 
         public ReviewService(IUnitOfWork unitOfWork, IMapper mapper)
         {
@@ -51,7 +53,6 @@ namespace TaskHive.Service.Services.ReviewService
             }
         }
 
-        // ✅ Get reviews tôi đã viết cho job post này
         public async Task<List<ReviewResponseDto>> GetMyReviewsForJobPostAsync(int jobPostId, int reviewerId)
         {
             try
@@ -66,7 +67,6 @@ namespace TaskHive.Service.Services.ReviewService
             }
         }
 
-        // ✅ Get reviews tôi nhận được trong job post này
         public async Task<List<ReviewResponseDto>> GetReceivedReviewsForJobPostAsync(int jobPostId, int revieweeId)
         {
             try
@@ -81,7 +81,6 @@ namespace TaskHive.Service.Services.ReviewService
             }
         }
 
-        // ✅ Get tất cả reviews tôi nhận được
         public async Task<List<ReviewResponseDto>> GetAllReceivedReviewsAsync(int revieweeId)
         {
             try
@@ -96,7 +95,6 @@ namespace TaskHive.Service.Services.ReviewService
             }
         }
 
-        // ✅ Get tất cả reviews tôi đã viết
         public async Task<List<ReviewResponseDto>> GetAllGivenReviewsAsync(int reviewerId)
         {
             try
@@ -115,7 +113,7 @@ namespace TaskHive.Service.Services.ReviewService
         {
             try
             {
-                // ✅ Business Rule 1: Kiểm tra đã review chưa
+                //  Business Rule 1: Kiểm tra đã review chưa
                 var existingReview = await _unitOfWork.Reviews.ExistsAsync(reviewerId, request.RevieweeId, request.JobPostId);
                 if (existingReview)
                 {
@@ -123,14 +121,14 @@ namespace TaskHive.Service.Services.ReviewService
                     return null;
                 }
 
-                // ✅ Business Rule 2: Không thể review chính mình
+                //  Business Rule 2: Không thể review chính mình
                 if (reviewerId == request.RevieweeId)
                 {
                     Console.WriteLine("Cannot review yourself");
                     return null;
                 }
 
-                // ✅ Business Rule 3: Không được review cho job post mình đăng
+                //  Business Rule 3: Không được review cho job post mình đăng
                 //var jobPost = await _unitOfWork.JobPosts.GetJobPostByIdAsync(request.JobPostId);
                 //if (jobPost == null)
                 //{
@@ -144,7 +142,7 @@ namespace TaskHive.Service.Services.ReviewService
                 //    return null;
                 //}
 
-                // ✅ Business Rule 4: Application phải ở trạng thái "Finished"
+                //  Business Rule 4: Application phải ở trạng thái "Finished"
                 var canReview = await CanUserReviewAsync(reviewerId, request.RevieweeId, request.JobPostId);
                 if (!canReview)
                 {
@@ -170,7 +168,6 @@ namespace TaskHive.Service.Services.ReviewService
             }
         }
 
-        // ✅ Business Logic: Kiểm tra quyền review
         private async Task<bool> CanUserReviewAsync(int reviewerId, int revieweeId, int jobPostId)
         {
             try
@@ -248,6 +245,118 @@ namespace TaskHive.Service.Services.ReviewService
             {
                 Console.WriteLine($"Delete review failed: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<(ReviewResponseDto? review, string? errorMessage)> CreatePlatformReviewAsync(PlatformReviewRequestDto request, int reviewerId)
+        {
+            try
+            {
+                // Check if user already reviewed platform
+                var existingReview = await _unitOfWork.Reviews.GetPlatformReviewByUserAsync(reviewerId, PLATFORM_REVIEWEE_ID);
+                if (existingReview != null)
+                {
+                    return (null, "You have already reviewed the platform.");
+                }
+
+                // Check if platform admin exists (revieweeId = 16)
+                var platformUser = await _unitOfWork.Users.GetByIdAsync(PLATFORM_REVIEWEE_ID);
+                if (platformUser == null)
+                {
+                    return (null, "Platform admin account not found.");
+                }
+
+                // Cannot review yourself (if user is admin)
+                if (reviewerId == PLATFORM_REVIEWEE_ID)
+                {
+                    return (null, "You cannot review yourself.");
+                }
+
+                var review = new Review
+                {
+                    ReviewerId = reviewerId,
+                    RevieweeId = PLATFORM_REVIEWEE_ID,
+                    JobPostId = PLATFORM_JOB_POST_ID, 
+                    Rating = request.Rating,
+                    Comment = request.Comment,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                await _unitOfWork.Reviews.CreateAsync(review);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Get complete review with related data
+                var createdReview = await _unitOfWork.Reviews.GetByIdAsync(review.ReviewId);
+                return (_mapper.Map<ReviewResponseDto>(createdReview), null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Create platform review failed: {ex.Message}");
+                return (null, "An error occurred while creating platform review.");
+            }
+        }
+
+        // NEW: Get platform reviews
+        public async Task<List<ReviewResponseDto>> GetPlatformReviewsAsync()
+        {
+            try
+            {
+                var reviews = await _unitOfWork.Reviews.GetPlatformReviewsAsync(PLATFORM_REVIEWEE_ID);
+                return _mapper.Map<List<ReviewResponseDto>>(reviews);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Get platform reviews failed: {ex.Message}");
+                return new List<ReviewResponseDto>();
+            }
+        }
+
+        // NEW: Get platform reviews with statistics
+        public async Task<object> GetPlatformReviewsWithStatsAsync()
+        {
+            try
+            {
+                var reviews = await GetPlatformReviewsAsync();
+
+                var stats = new
+                {
+                    TotalReviews = reviews.Count,
+                    AverageRating = reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 2) : 0,
+                    RatingDistribution = reviews.GroupBy(r => r.Rating)
+                        .Select(g => new { Rating = g.Key, Count = g.Count() })
+                        .OrderByDescending(x => x.Rating)
+                        .ToList(),
+                    RecentReviews = reviews.Take(10).ToList()
+                };
+
+                return new
+                {
+                    reviews,
+                    statistics = stats,
+                    platformInfo = new
+                    {
+                        RevieweeId = PLATFORM_REVIEWEE_ID,
+                        Name = "TaskHive Platform",
+                        Description = "Reviews about TaskHive platform and services"
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Get platform reviews with stats failed: {ex.Message}");
+                return new
+                {
+                    reviews = new List<ReviewResponseDto>(),
+                    statistics = new
+                    {
+                        TotalReviews = 0,
+                        AverageRating = 0,
+                        RatingDistribution = new List<object>(),
+                        RecentReviews = new List<ReviewResponseDto>()
+                    },
+                    error = "Failed to load platform reviews"
+                };
             }
         }
     }

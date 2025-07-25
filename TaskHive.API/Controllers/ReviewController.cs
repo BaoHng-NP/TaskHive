@@ -18,7 +18,7 @@ namespace TaskHive.API.Controllers
             _reviewService = reviewService;
         }
 
-        // ✅ Get reviews tôi đã viết cho job post này
+        //Get reviews tôi đã viết cho job post này
         [HttpGet("my-reviews/job-post/{jobPostId}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -34,7 +34,7 @@ namespace TaskHive.API.Controllers
             return Ok(new { jobPostId, myReviews = reviews });
         }
 
-        // ✅ Get reviews tôi nhận được trong job post này
+        //Get reviews tôi nhận được trong job post này
         [HttpGet("received-reviews/job-post/{jobPostId}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -50,7 +50,7 @@ namespace TaskHive.API.Controllers
             return Ok(new { jobPostId, receivedReviews = reviews });
         }
 
-        // ✅ Get tất cả reviews tôi nhận được
+        //Get tất cả reviews tôi nhận được
         [HttpGet("my-received-reviews")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -64,7 +64,7 @@ namespace TaskHive.API.Controllers
 
             var reviews = await _reviewService.GetAllReceivedReviewsAsync(userId);
 
-            // ✅ Tính thống kê
+            //Tính thống kê
             var stats = new
             {
                 TotalReviews = reviews.Count,
@@ -78,7 +78,7 @@ namespace TaskHive.API.Controllers
             return Ok(new { reviews, statistics = stats });
         }
 
-        // ✅ Get tất cả reviews tôi đã viết
+        //Get tất cả reviews tôi đã viết
         [HttpGet("my-given-reviews")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -94,7 +94,7 @@ namespace TaskHive.API.Controllers
             return Ok(new { givenReviews = reviews });
         }
 
-        // ✅ Get reviews của user khác (public)
+        //Get reviews của user khác (public)
         [HttpGet("user/{userId}/received-reviews")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetUserReceivedReviews(int userId)
@@ -204,6 +204,62 @@ namespace TaskHive.API.Controllers
         {
             var reviews = await _reviewService.GetAllReviewsAsync();
             return Ok(reviews);
+        }
+
+        //Create platform review
+        [HttpPost("platform")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> CreatePlatformReview([FromBody] PlatformReviewRequestDto request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var reviewerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(reviewerIdClaim) || !int.TryParse(reviewerIdClaim, out var reviewerId))
+                return Unauthorized(new { message = "Invalid user token" });
+
+            var (review, errorMessage) = await _reviewService.CreatePlatformReviewAsync(request, reviewerId);
+
+            if (review == null)
+                return Conflict(new
+                {
+                    message = errorMessage ?? "Failed to create platform review.",
+                    code = "PLATFORM_REVIEW_FAILED"
+                });
+
+            return CreatedAtAction(nameof(GetReview), new { id = review.ReviewId }, new
+            {
+                review,
+                message = "Platform review created successfully"
+            });
+        }
+
+        // Get platform reviews
+        [HttpGet("platform")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPlatformReviews()
+        {
+            var reviews = await _reviewService.GetPlatformReviewsAsync();
+            return Ok(new
+            {
+                platformReviews = reviews,
+                count = reviews.Count,
+                message = "Platform reviews retrieved successfully"
+            });
+        }
+
+        //Get platform reviews with statistics
+        [HttpGet("platform/stats")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPlatformReviewsWithStats()
+        {
+            var result = await _reviewService.GetPlatformReviewsWithStatsAsync();
+            return Ok(result);
         }
     }
 }

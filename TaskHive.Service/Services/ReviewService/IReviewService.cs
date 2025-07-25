@@ -22,5 +22,10 @@ namespace TaskHive.Service.Services.ReviewService
         Task<ReviewResponseDto?> CreateReviewAsync(ReviewRequestDto request, int reviewerId);
         Task<ReviewResponseDto?> UpdateReviewAsync(int reviewId, UpdateReviewRequestDto request, int reviewerId);
         Task<bool> DeleteReviewAsync(int reviewId, int reviewerId);
+
+        //Platform reviews
+        Task<(ReviewResponseDto? review, string? errorMessage)> CreatePlatformReviewAsync(PlatformReviewRequestDto request, int reviewerId);
+        Task<List<ReviewResponseDto>> GetPlatformReviewsAsync();
+        Task<object> GetPlatformReviewsWithStatsAsync();
     }
 }

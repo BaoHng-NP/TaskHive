@@ -110,5 +110,29 @@ namespace TaskHive.Repository.Repositories.ReviewRepository
                 .OrderByDescending(re => re.CreatedAt)
                 .ToListAsync();
         }
+
+
+        public async Task<Review?> GetPlatformReviewByUserAsync(int reviewerId, int platformRevieweeId)
+        {
+            return await _context.Reviews
+                .Include(r => r.Reviewer)
+                .Include(r => r.Reviewee)
+                .FirstOrDefaultAsync(r =>
+                    r.ReviewerId == reviewerId &&
+                    r.RevieweeId == platformRevieweeId &&
+                    !r.IsDeleted); 
+        }
+
+        public async Task<List<Review>> GetPlatformReviewsAsync(int platformRevieweeId)
+        {
+            return await _context.Reviews
+                .Include(r => r.Reviewer)
+                .Include(r => r.Reviewee)
+                .Where(r =>
+                    r.RevieweeId == platformRevieweeId &&
+                    !r.IsDeleted) 
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

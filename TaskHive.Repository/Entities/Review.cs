@@ -25,8 +25,8 @@ namespace TaskHive.Repository.Entities
         [ForeignKey("RevieweeId")]
         public User Reviewee { get; set; } = null!;
 
-        [Required]
-        public int JobPostId { get; set; }
+        
+        public int? JobPostId { get; set; }
 
         [ForeignKey("JobPostId")]
         public JobPost JobPost { get; set; } = null!;

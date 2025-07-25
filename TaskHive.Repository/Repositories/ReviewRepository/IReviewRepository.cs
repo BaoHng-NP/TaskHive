@@ -23,5 +23,8 @@ namespace TaskHive.Repository.Repositories.ReviewRepository
 
         Task<List<Review>> GetByPostIdAndReviewerIdAsync(int jobPostId, int reviewerId);
         Task<List<Review>> GetByPostIdAndRevieweeIdAsync(int jobPostId, int revieweeId);
+        // Platform reviews
+        Task<Review?> GetPlatformReviewByUserAsync(int reviewerId, int platformRevieweeId);
+        Task<List<Review>> GetPlatformReviewsAsync(int platformRevieweeId);
     }
 }
