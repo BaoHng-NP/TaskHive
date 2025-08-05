@@ -11,6 +11,7 @@ using TaskHive.Service.DTOs.Responses.User;
 using TaskHive.Service.Services.UserService;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using System.Collections.Generic;
 
 namespace TaskHive.API.Controllers
 {
@@ -284,14 +285,14 @@ namespace TaskHive.API.Controllers
             {
                 if (string.Equals(userRole, "Freelancer", StringComparison.OrdinalIgnoreCase))
                 {
-                    var (freelancer,count,average) = await _userService.GetFreelancerByIdAsync(userIdInt);
+                    var (freelancer, count, average) = await _userService.GetFreelancerByIdAsync(userIdInt);
                     if (freelancer == null) return NotFound(new { message = "User not found" });
                     var response = _mapper.Map<FreelancerProfileResponseDto>(freelancer);
                     return Ok(response);
                 }
                 else if (string.Equals(userRole, "Client", StringComparison.OrdinalIgnoreCase))
                 {
-                    var (client,count,average) = await _userService.GetClientByIdAsync(userIdInt);
+                    var (client, count, average) = await _userService.GetClientByIdAsync(userIdInt);
                     if (client == null) return NotFound(new { message = "User not found" });
                     var response = _mapper.Map<ClientProfileResponseDto>(client);
                     return Ok(response);
@@ -437,6 +438,27 @@ namespace TaskHive.API.Controllers
                     message = "Image upload failed",
                     error = ex.Message
                 });
+            }
+        }
+
+        [HttpGet("all")]
+        [ProducesResponseType(typeof(List<AllUsersResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            try
+            {
+                var users = await _userService.GetAllUsersAsync();
+                return Ok(new
+                {
+                    users,
+                    count = users.Count,
+                    message = "Users retrieved successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Failed to retrieve users: {ex.Message}" });
             }
         }
     }

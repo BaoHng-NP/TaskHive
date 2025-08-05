@@ -20,6 +20,7 @@ namespace TaskHive.Repository.Repositories.UserRepository
         Task AddClientAsync(Client client);
         Task<Freelancer?> GetFreelancerByIdAsync(int userId);
         Task<Client?> GetClientByIdAsync(int userId);
+        Task<List<User>> GetAllUsersAsync();
     }
 
 }

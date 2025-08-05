@@ -52,6 +52,11 @@ namespace TaskHive.Repository.Repositories.UserRepository
 
         public async Task<Client?> GetClientByIdAsync(int userId) =>
             await _context.Set<Client>().FirstOrDefaultAsync(c => c.UserId == userId);
+
+        public async Task<List<User>> GetAllUsersAsync() =>
+            await _context.Users
+                .OrderByDescending(u => u.CreatedAt)
+                .ToListAsync();
     }
 
 }

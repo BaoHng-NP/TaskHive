@@ -41,5 +41,6 @@ namespace TaskHive.Service.Services.UserService
         Task<(ClientProfileResponseDto? clientProfileResponse, string? errorMessage)> UpdateClientProfileAsync(int userId, ClientProfileDto model);
         Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateRemainingSlotAsync(int userId, int UpdateSlot);
 
+        Task<List<AllUsersResponseDto>> GetAllUsersAsync();
     }
 }

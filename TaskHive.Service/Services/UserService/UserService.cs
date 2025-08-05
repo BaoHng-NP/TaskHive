@@ -831,5 +831,18 @@ namespace TaskHive.Service.Services.UserService
             }
         }
 
+        public async Task<List<AllUsersResponseDto>> GetAllUsersAsync()
+        {
+            try
+            {
+                var users = await _unitOfWork.Users.GetAllUsersAsync();
+                return _mapper.Map<List<AllUsersResponseDto>>(users);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Get all users failed: {ex.Message}");
+                return new List<AllUsersResponseDto>();
+            }
+        }
     }
 }

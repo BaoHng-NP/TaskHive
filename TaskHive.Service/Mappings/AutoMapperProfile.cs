@@ -139,6 +139,9 @@ namespace TaskHive.Service.Mappings
                     .ForMember(dest => dest.JobPost, opt => opt.Ignore())
                     .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                     .ForMember(dest => dest.IsDeleted, opt => opt.Ignore());
+
+            CreateMap<User, AllUsersResponseDto>()
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
         }
     }
 }

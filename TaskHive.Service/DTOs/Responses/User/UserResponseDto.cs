@@ -55,4 +55,16 @@ namespace TaskHive.Service.DTOs.Responses.User
 
         public bool? IsEmailVerified { get; set; }
     }
+
+    public class AllUsersResponseDto
+    {
+        public int UserId { get; set; }
+        public string Email { get; set; } = null!;
+        public string? imageUrl { get; set; }
+        public string FullName { get; set; } = null!;
+        public string? Country { get; set; }
+        public string Role { get; set; } = null!;
+        public bool IsEmailVerified { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
 }

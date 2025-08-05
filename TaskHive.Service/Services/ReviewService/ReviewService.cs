@@ -16,6 +16,9 @@ namespace TaskHive.Service.Services.ReviewService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        /// <summary>
+        /// PLATFORM_REVIEWEE_ID and PLATFORM_JOB_POST_ID to match your platform admin and job post IDs
+        /// </summary>
         private const int PLATFORM_REVIEWEE_ID = 19; 
         private const int PLATFORM_JOB_POST_ID = 13; 
 
