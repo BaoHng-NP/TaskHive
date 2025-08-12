@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Net;
 using System.Threading.Tasks;
+using TaskHive.API.Hubs;
 using TaskHive.Service.DTOs;
 using TaskHive.Service.Services.MessageService;
 
@@ -11,10 +13,12 @@ namespace TaskHive.API.Controllers
     public class MessageController : ControllerBase
     {
         private readonly IMessageService _svc;
+        private readonly IHubContext<ChatHub> _hub;
 
-        public MessageController(IMessageService svc)
+        public MessageController(IMessageService svc, IHubContext<ChatHub> hub)
         {
             _svc = svc;
+            _hub = hub;
         }
 
         [HttpGet("{conversationId}")]
@@ -32,6 +36,8 @@ namespace TaskHive.API.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var msg = await _svc.SendMessageAsync(conversationId, dto);
+            await _hub.Clients.Group(conversationId.ToString())
+                          .SendAsync("ReceiveMessage", msg);
             return CreatedAtAction(nameof(GetByConversation), new { conversationId }, msg);
         }
     }

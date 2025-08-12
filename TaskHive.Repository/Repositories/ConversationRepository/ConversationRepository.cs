@@ -41,5 +41,14 @@ namespace TaskHive.Repository.Repositories.ConversationRepository
                 .Include(cm => cm.User)
                 .ToListAsync();
         }
+        public async Task<List<Conversation>> GetForUserAsync(int userId)
+        {
+            return await _db.Conversations
+                .Include(c => c.Members).ThenInclude(m => m.User)
+                .Include(c => c.Messages)
+                .Where(c => c.Members.Any(m => m.UserId == userId))
+                .OrderByDescending(c => c.Messages.Max(m => (DateTime?)m.CreatedAt))
+                .ToListAsync();
+        }
     }
 }

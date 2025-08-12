@@ -38,6 +38,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy.WithOrigins(
             "http://localhost:5173", // local dev
+            "https://localhost:5173",
             "https://taskhive-freelancer-9bd0pi088-baogiadev18s-projects.vercel.app", // thay bằng domain Vercel thật
             "https://taskhive-freelancer-fe.vercel.app",
             "https://dashboard.uptimerobot.com/"

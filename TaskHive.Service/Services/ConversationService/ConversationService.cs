@@ -8,6 +8,7 @@ using TaskHive.Repository.Entities;
 using TaskHive.Repository.Enums;
 using TaskHive.Repository.UnitOfWork;
 using TaskHive.Service.DTOs;
+using TaskHive.Service.DTOs.Responses;
 
 namespace TaskHive.Service.Services.ConversationService
 {
@@ -64,6 +65,57 @@ namespace TaskHive.Service.Services.ConversationService
                 UserId = memberId
             });
             await _uow.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<ConversationListItemDto>> GetForFreelancerAsync(int userId)
+            => await BuildList(userId);
+
+        public async Task<IEnumerable<ConversationListItemDto>> GetForClientAsync(int userId)
+            => await BuildList(userId);
+
+        public async Task<IEnumerable<ConversationListItemDto>> BuildList(int userId)
+        {
+            var conversations = await _uow.Conversations.GetForUserAsync(userId);
+
+            var list = conversations.Select(c =>
+            {
+                // Chỉ lấy 1-1: partner là người khác userId
+                var partnerMember = c.Members.FirstOrDefault(m => m.UserId != userId);
+                var partnerUser = partnerMember?.User;
+
+                var last = c.Messages
+                    .OrderByDescending(m => m.CreatedAt)
+                    .FirstOrDefault();
+
+                // Nếu DB chưa có IsRead/ReceiverId, UnreadCount = 0
+                var unread = 0;
+                try
+                {
+                    unread = c.Messages.Count(m =>
+                        (bool?)m.GetType().GetProperty("IsRead")?.GetValue(m) == false &&
+                        (int?)m.GetType().GetProperty("ReceiverId")?.GetValue(m) == userId
+                    );
+                }
+                catch { /* ignore if fields not exist */ }
+
+                return new ConversationListItemDto
+                {
+                    ConversationId = c.ConversationId,
+                    PartnerId = partnerUser?.UserId ?? 0,
+                    PartnerName = partnerUser?.FullName
+                        ?? partnerUser?.UserName
+                        ?? "Unknown",
+                    PartnerAvatarUrl = partnerUser?.imageUrl,
+                    LastMessage = last?.Content,
+                    LastMessageAt = last?.CreatedAt,
+                    UnreadCount = unread
+                };
+            })
+            // Sắp xếp theo last message desc (đẩy null xuống cuối)
+            .OrderByDescending(i => i.LastMessageAt ?? DateTime.MinValue)
+            .ToList();
+
+            return list;
         }
     }
 }

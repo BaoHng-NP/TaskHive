@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TaskHive.Service.DTOs;
+using TaskHive.Service.DTOs.Responses;
 
 namespace TaskHive.Service.Services.ConversationService
 {
@@ -12,5 +13,9 @@ namespace TaskHive.Service.Services.ConversationService
         Task<ConversationDto?> GetByIdAsync(int conversationId);
         Task<ConversationDto> CreateAsync(CreateConversationDto dto);
         Task AddMemberAsync(int conversationId, int memberId);
+        Task<IEnumerable<ConversationListItemDto>> GetForFreelancerAsync(int userId);
+        Task<IEnumerable<ConversationListItemDto>> GetForClientAsync(int userId);
+        Task<IEnumerable<ConversationListItemDto>> BuildList(int userId);
+
     }
 }

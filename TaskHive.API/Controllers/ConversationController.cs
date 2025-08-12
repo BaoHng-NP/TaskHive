@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Threading.Tasks;
 using TaskHive.Service.DTOs;
+using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.Services.ConversationService;
 
 namespace TaskHive.API.Controllers
@@ -43,6 +44,30 @@ namespace TaskHive.API.Controllers
         {
             await _svc.AddMemberAsync(id, userId);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Lấy tất cả hội thoại mà freelancer (userId) tham gia.
+        /// Trả về partner là phía Client (tên + avatar) để hiển thị danh sách.
+        /// </summary>
+        [HttpGet("freelancer/{userId:int}")]
+        [ProducesResponseType(typeof(IEnumerable<ConversationListItemDto>), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> GetForFreelancer(int userId)
+        {
+            var list = await _svc.GetForFreelancerAsync(userId);
+            return Ok(list);
+        }
+
+        /// <summary>
+        /// Lấy tất cả hội thoại mà client (userId) tham gia.
+        /// Trả về partner là phía Freelancer (tên + avatar) để hiển thị danh sách.
+        /// </summary>
+        [HttpGet("client/{userId:int}")]
+        [ProducesResponseType(typeof(IEnumerable<ConversationListItemDto>), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> GetForClient(int userId)
+        {
+            var list = await _svc.GetForClientAsync(userId);
+            return Ok(list);
         }
     }
 }

@@ -13,5 +13,6 @@ namespace TaskHive.Repository.Repositories.ConversationRepository
         Task<Conversation> CreateAsync(Conversation conversation);
         Task AddMemberAsync(ConversationMember member);
         Task<IEnumerable<ConversationMember>> GetMembersAsync(int conversationId);
+        Task<List<Conversation>> GetForUserAsync(int userId);
     }
 }
