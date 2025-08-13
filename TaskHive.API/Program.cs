@@ -33,19 +33,35 @@ builder.Services.AddSingleton(sp => {
 });
 
 // --- 3) CORS: Cho phép FE local và FE deploy (Vercel) truy cập với credentials ---
+// CORS
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(
-            "http://localhost:5173", // local dev
-            "https://localhost:5173",
-            "https://taskhive-freelancer-9bd0pi088-baogiadev18s-projects.vercel.app", // thay bằng domain Vercel thật
-            "https://taskhive-freelancer-fe.vercel.app",
-            "https://dashboard.uptimerobot.com/"
-        ) 
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials()
+    options.AddPolicy("Frontend", policy =>
+        policy
+            // Cho localhost dev
+            .WithOrigins(
+                "http://localhost:5173",
+                "https://localhost:5173",
+                "https://dashboard.uptimerobot.com/"
+            )
+            // Cho production domain cố định (nếu có)
+            .WithOrigins(
+                "https://taskhive-freelancer-fe.vercel.app"
+            )
+            // Cho phép tất cả subdomain *.vercel.app (preview)
+            .SetIsOriginAllowed(origin =>
+            {
+                try
+                {
+                    var host = new Uri(origin).Host.ToLowerInvariant();
+                    // bạn có thể thu hẹp thêm nếu muốn: host.EndsWith("taskhive-freelancer-fe.vercel.app")
+                    return host.EndsWith("vercel.app");
+                }
+                catch { return false; }
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
     );
 });
 
@@ -126,8 +142,7 @@ builder.Services.AddAuthentication(opts =>
 
 var app = builder.Build();
 
-// --- 6) Middleware pipeline ---
-app.UseCors();                  // <-- chỉ gọi UseCors() một lần (dùng default policy)
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -140,11 +155,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRouting();              // <-- THÊM
+
+app.UseCors("Frontend");       // <-- Dùng policy đã đặt tên, đặt trước Auth/Z
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-// --- 7) Map SignalR hub & API controllers ---
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
 
 app.Run();
+
