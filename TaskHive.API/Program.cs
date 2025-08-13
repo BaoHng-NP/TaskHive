@@ -38,32 +38,18 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
         policy
-            // Cho localhost dev
             .WithOrigins(
                 "http://localhost:5173",
                 "https://localhost:5173",
+                "https://taskhive-freelancer-fe.vercel.app"
                 "https://dashboard.uptimerobot.com/"
             )
-            // Cho production domain cố định (nếu có)
-            .WithOrigins(
-                "https://taskhive-freelancer-fe.vercel.app"
-            )
-            // Cho phép tất cả subdomain *.vercel.app (preview)
-            .SetIsOriginAllowed(origin =>
-            {
-                try
-                {
-                    var host = new Uri(origin).Host.ToLowerInvariant();
-                    // bạn có thể thu hẹp thêm nếu muốn: host.EndsWith("taskhive-freelancer-fe.vercel.app")
-                    return host.EndsWith("vercel.app");
-                }
-                catch { return false; }
-            })
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
     );
 });
+
 
 
 // --- 4) SignalR & Controllers & EF & DI & Swagger ---
