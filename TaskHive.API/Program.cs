@@ -41,7 +41,7 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:5173",
                 "https://localhost:5173",
-                "https://taskhive-freelancer-fe.vercel.app"
+                "https://taskhive-freelancer-fe.vercel.app",
                 "https://dashboard.uptimerobot.com/"
             )
             .AllowAnyHeader()
