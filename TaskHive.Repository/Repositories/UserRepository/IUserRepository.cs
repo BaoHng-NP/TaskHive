@@ -15,6 +15,7 @@ namespace TaskHive.Repository.Repositories.UserRepository
         Task<User?> GetByGoogleIdAsync(string googleId);
         Task<User?> GetByIdAsync(int userId);
         Task UpdateAsync(User user);
+        IQueryable<Freelancer> GetFreelancersQueryable();
 
         Task AddFreelancerAsync(Freelancer freelancer);
         Task AddClientAsync(Client client);

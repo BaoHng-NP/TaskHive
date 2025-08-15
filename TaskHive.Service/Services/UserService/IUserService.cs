@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TaskHive.Repository.Entities;
+using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.DTOs.Responses.User;
@@ -41,6 +42,7 @@ namespace TaskHive.Service.Services.UserService
         Task<(ClientProfileResponseDto? clientProfileResponse, string? errorMessage)> UpdateClientProfileAsync(int userId, ClientProfileDto model);
         Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> UpdateRemainingSlotAsync(int userId, int UpdateSlot);
         Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> AddRemainingSlotAsync(int userId, int amount);
+        Task<PagedResult<FreelancerListItemWithRatingResponseDto>> GetFreelancersPagedWithRatingsAsync(JobQueryParam param);
 
         Task<List<AllUsersResponseDto>> GetAllUsersAsync();
     }

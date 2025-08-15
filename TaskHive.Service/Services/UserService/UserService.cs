@@ -1,20 +1,23 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using AutoMapper;
+using Google.Apis.Auth;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using TaskHive.Repository.Entities;
+using TaskHive.Repository.Repositories.JobPostRepository;
+using TaskHive.Repository.Repositories.ReviewRepository;
 using TaskHive.Repository.UnitOfWork;
 using TaskHive.Service.DTOs.Requests.User;
 using TaskHive.Service.DTOs.Responses;
-using Google.Apis.Auth;
-using TaskHive.Service.Services.EmailService;
 using TaskHive.Service.DTOs.Responses.User;
-using AutoMapper;
-using TaskHive.Repository.Repositories.ReviewRepository;
+using TaskHive.Service.Services.EmailService;
 
 namespace TaskHive.Service.Services.UserService
 {
@@ -871,6 +874,63 @@ namespace TaskHive.Service.Services.UserService
                 Console.WriteLine($"Get all users failed: {ex.Message}");
                 return new List<AllUsersResponseDto>();
             }
+        }
+        public async Task<PagedResult<FreelancerListItemWithRatingResponseDto>> GetFreelancersPagedWithRatingsAsync(JobQueryParam param)
+        {
+            // Base query
+            var query = _unitOfWork.Users.GetFreelancersQueryable();
+
+            // Search theo tên freelancer hoặc tên skill category
+            if (!string.IsNullOrWhiteSpace(param.Search))
+            {
+                var s = param.Search.ToLower();
+                query = query.Where(f =>
+                    EF.Functions.Like(f.FullName, $"%{param.Search}%") ||
+                    f.UserSkills.Any(us => EF.Functions.Like(us.Category.Name, $"%{param.Search}%"))
+                );
+            }
+
+            // Lọc theo CategoryIds (skill)
+            if (param.CategoryIds != null && param.CategoryIds.Any())
+            {
+                var catIds = param.CategoryIds;
+                query = query.Where(f => f.UserSkills.Any(us => catIds.Contains(us.CategoryId)));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(f => f.UpdatedAt) // hoặc CreatedAt
+                .Skip((param.Page - 1) * param.PageSize)
+                .Take(param.PageSize)
+                .Select(f => new FreelancerListItemWithRatingResponseDto
+                {
+                    UserId = f.UserId,
+                    FullName = f.FullName,
+                    Country = f.Country,
+                    ImageUrl = f.imageUrl,
+                    ReviewCount = f.ReviewsReceived.Count(),
+                    AverageRating = f.ReviewsReceived.Any()
+                        ? (decimal)f.ReviewsReceived.Average(r => (decimal)r.Rating)
+                        : 0m,
+                    Skills = f.UserSkills.Select(us => new UserSkillDto
+                    {
+                        Id = us.UserId,
+                        CategoryId = us.CategoryId,
+                        CategoryName = us.Category.Name,
+                        CategoryDescription = us.Category.Description
+                    }).ToList(),
+                    About = null // nếu bạn có trường mô tả thì bind vào đây
+                })
+                .ToListAsync();
+
+            return new PagedResult<FreelancerListItemWithRatingResponseDto>
+            {
+                Items = items,
+                TotalItems = totalCount,
+                Page = param.Page,
+                PageSize = param.PageSize
+            };
         }
     }
 }

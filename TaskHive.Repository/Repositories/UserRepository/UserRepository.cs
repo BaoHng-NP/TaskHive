@@ -57,6 +57,13 @@ namespace TaskHive.Repository.Repositories.UserRepository
             await _context.Users
                 .OrderByDescending(u => u.CreatedAt)
                 .ToListAsync();
+        public IQueryable<Freelancer> GetFreelancersQueryable()
+        {
+            // Include skills để project ra tên category
+            return _context.Set<Freelancer>()
+                .Include(f => f.UserSkills)
+                    .ThenInclude(us => us.Category);
+        }
     }
 
 }

@@ -1,17 +1,20 @@
 ﻿using AutoMapper;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using TaskHive.Repository.Entities;
+using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Service.DTOs.Requests.User;
+using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.DTOs.Responses.User;
 using TaskHive.Service.Services.UserService;
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
-using System.Collections.Generic;
 
 namespace TaskHive.API.Controllers
 {
@@ -460,6 +463,17 @@ namespace TaskHive.API.Controllers
             {
                 return StatusCode(500, new { message = $"Failed to retrieve users: {ex.Message}" });
             }
+        }
+
+        [HttpGet("freelancers/paged-with-ratings")]
+        [ProducesResponseType(typeof(PagedResult<FreelancerListItemWithRatingResponseDto>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        public async Task<IActionResult> GetFreelancersPagedWithRatings([FromQuery] JobQueryParam parameters)
+        {
+            var paged = await _userService.GetFreelancersPagedWithRatingsAsync(parameters);
+            if (paged == null || paged.Items == null || !paged.Items.Any())
+                return NotFound("No freelancers found.");
+            return Ok(paged);
         }
     }
 }
