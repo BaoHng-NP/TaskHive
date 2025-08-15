@@ -61,6 +61,14 @@ namespace TaskHive.Service.Services.PaymentService
                 await _unitOfWork.SaveChangesAsync();
             }
 
+            var membership = await _unitOfWork.Memberships
+                .GetMembershipByIdAsync(dto.MembershipId);
+
+            if (membership == null)
+                return (null, "Membership not found");
+
+            var monthlyLimit = membership.MonthlySlotLimit;
+
             // c) Tạo bản ghi mới cho UserMembership
             var userMembershipDto = new AddUserMembershipRequestDto
             {
@@ -76,6 +84,9 @@ namespace TaskHive.Service.Services.PaymentService
             if (umError != null)
                 return (null, $"Payment created but failed to add membership: {umError}");
 
+            await _userService.AddRemainingSlotAsync(dto.UserId, monthlyLimit);
+            await _unitOfWork.SaveChangesAsync();
+
             // 3. Map và trả về kết quả
             var resultDto = _mapper.Map<PaymentResponseDto>(payment);
             return (resultDto, null);
@@ -90,7 +101,7 @@ namespace TaskHive.Service.Services.PaymentService
 
             var success = await _unitOfWork.Payments.AddPaymentAsync(payment);
             if (!success) return (null, "Failed to create payment");
-            var updatedSlotPurchase = await _userService.UpdateRemainingSlotAsync(dto.UserId, slotQuantity);
+            var updatedSlotPurchase = await _userService.AddRemainingSlotAsync(dto.UserId, slotQuantity);
 
             await _unitOfWork.SaveChangesAsync();
 

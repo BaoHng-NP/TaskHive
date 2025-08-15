@@ -831,6 +831,34 @@ namespace TaskHive.Service.Services.UserService
             }
         }
 
+        public async Task<(FreelancerProfileResponseDto? freelancerProfileResponse, string? errorMessage)> AddRemainingSlotAsync(int userId, int amount)
+        {
+            try
+            {
+                var freelancer = await _unitOfWork.Users.GetFreelancerByIdAsync(userId);
+                if (freelancer == null) return (null, "User not found.");
+
+                // cộng dồn, chặn âm
+                var newValue = freelancer.RemainingSlots + amount;
+                if (newValue < 0) newValue = 0;
+
+                freelancer.RemainingSlots = newValue;
+                freelancer.UpdatedAt = DateTime.UtcNow;
+
+                await _unitOfWork.Users.UpdateAsync(freelancer);
+                await _unitOfWork.SaveChangesAsync();
+
+                var response = new FreelancerProfileResponseDto();
+                _mapper.Map(freelancer, response);
+                return (response, null);
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Failed to add remaining slot: {ex.Message}");
+            }
+        }
+
+
         public async Task<List<AllUsersResponseDto>> GetAllUsersAsync()
         {
             try
