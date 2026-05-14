@@ -1,4 +1,4 @@
-﻿using CloudinaryDotNet;
+using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -33,17 +33,22 @@ builder.Services.AddSingleton(sp => {
 });
 
 // --- 3) CORS: Cho phép FE local và FE deploy (Vercel) truy cập với credentials ---
+var frontendBaseUrls = builder.Configuration["Frontend:BaseUrl"];
+var allowedOrigins = !string.IsNullOrEmpty(frontendBaseUrls) 
+    ? frontendBaseUrls.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim()).ToArray()
+    : new[] { 
+        "http://localhost:5173", 
+        "https://localhost:5173", 
+        "https://taskhive-freelancer-fe.vercel.app", 
+        "https://dashboard.uptimerobot.com/" 
+      };
+
 // CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "https://localhost:5173",
-                "https://taskhive-freelancer-fe.vercel.app",
-                "https://dashboard.uptimerobot.com/"
-            )
+            .WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
