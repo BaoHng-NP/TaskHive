@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Google.Apis.Auth;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -50,7 +51,7 @@ namespace TaskHive.Service.Services.UserService
         // Create AuthResponse without User info
         private async Task<AuthResponseDto> CreateAuthResponseAsync(User user)
         {
-            var accessToken = GenerateJwtToken(user);
+            var (accessToken, accessTokenExpiresAt) = GenerateJwtToken(user);
             var refreshToken = GenerateRefreshToken();
 
             // Save refresh token to database
@@ -69,7 +70,7 @@ namespace TaskHive.Service.Services.UserService
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                ExpiresAt = accessTokenExpiresAt, // khớp đúng với hạn của JWT
                 Message = "Authentication successful!"
             };
         }
@@ -79,8 +80,9 @@ namespace TaskHive.Service.Services.UserService
             try
             {
                 var user = await _unitOfWork.Users.GetByEmailAsync(model.Email);
+                var (passwordValid, needsRehash) = user == null ? (false, false) : VerifyPassword(user, model.Password);
 
-                if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !VerifyPassword(model.Password, user.PasswordHash))
+                if (user == null || !passwordValid)
                 {
                     // Check if user exists and has GoogleId (registered via Google)
                     if (user != null && !string.IsNullOrEmpty(user.GoogleId))
@@ -93,6 +95,14 @@ namespace TaskHive.Service.Services.UserService
                 if (!user.IsEmailVerified)
                 {
                     return (null, "Please verify your email before logging in.");
+                }
+
+                // Nâng cấp hash cũ (SHA256 không salt) sang PBKDF2 ngay khi biết mật khẩu đúng.
+                // Được lưu cùng SaveChanges trong CreateAuthResponseAsync.
+                if (needsRehash)
+                {
+                    user.PasswordHash = HashPassword(user, model.Password);
+                    await _unitOfWork.Users.UpdateAsync(user);
                 }
 
                 var authResponse = await CreateAuthResponseAsync(user);
@@ -123,7 +133,6 @@ namespace TaskHive.Service.Services.UserService
                     Email = model.Email,
                     FullName = model.FullName,
                     Country = model.Country,
-                    PasswordHash = HashPassword(model.Password),
                     PortfolioUrl = model.PortfolioUrl,
                     Role = Repository.Enums.UserRole.Freelancer,
                     CreatedAt = DateTime.UtcNow,
@@ -131,6 +140,7 @@ namespace TaskHive.Service.Services.UserService
                     IsEmailVerified = false,
                     RemainingSlots = 0
                 };
+                freelancer.PasswordHash = HashPassword(freelancer, model.Password);
 
                 await _unitOfWork.Users.AddFreelancerAsync(freelancer);
                 await _unitOfWork.SaveChangesAsync();
@@ -177,13 +187,13 @@ namespace TaskHive.Service.Services.UserService
                     Email = model.Email,
                     FullName = model.FullName,
                     Country = model.Country,
-                    PasswordHash = HashPassword(model.Password),
                     Role = Repository.Enums.UserRole.Client,
                     CompanyName = "",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     IsEmailVerified = false
                 };
+                client.PasswordHash = HashPassword(client, model.Password);
 
                 await _unitOfWork.Users.AddClientAsync(client);
                 await _unitOfWork.SaveChangesAsync();
@@ -248,12 +258,18 @@ namespace TaskHive.Service.Services.UserService
 
                 if (existingUserByEmail != null)
                 {
+                    // Chỉ liên kết với tài khoản có sẵn khi Google xác nhận chủ sở hữu email
+                    if (!payload.EmailVerified)
+                    {
+                        return (null, "Your Google email is not verified. Please login with your password.");
+                    }
+
                     existingUserByEmail.GoogleId = payload.Subject;
                     if (string.IsNullOrEmpty(existingUserByEmail.imageUrl))
                     {
                         existingUserByEmail.imageUrl = payload.Picture;
                     }
-                    existingUserByEmail.IsEmailVerified = payload.EmailVerified;
+                    existingUserByEmail.IsEmailVerified = true;
                     existingUserByEmail.FullName = payload.Name;
                     existingUserByEmail.UpdatedAt = DateTime.UtcNow;
 
@@ -275,7 +291,8 @@ namespace TaskHive.Service.Services.UserService
             }
             catch (Exception ex)
             {
-                return (null, $"Google login failed: {ex.Message}");
+                Console.WriteLine($"Google login failed: {ex.Message}");
+                return (null, "Google login failed. Please try again.");
             }
         }
 
@@ -383,7 +400,8 @@ namespace TaskHive.Service.Services.UserService
             }
             catch (Exception ex)
             {
-                return (null, $"Google registration failed: {ex.Message}");
+                Console.WriteLine($"Google registration failed: {ex.Message}");
+                return (null, "Google registration failed. Please try again.");
             }
         }
 
@@ -433,21 +451,45 @@ namespace TaskHive.Service.Services.UserService
         }
 
 
-        private string HashPassword(string password)
+        // PBKDF2 (HMAC-SHA512, salt ngẫu nhiên, nhiều vòng lặp) của ASP.NET Core Identity.
+        private static readonly PasswordHasher<User> _passwordHasher = new();
+
+        private static string HashPassword(User user, string password)
+            => _passwordHasher.HashPassword(user, password);
+
+        /// <summary>
+        /// Kiểm tra mật khẩu. Hỗ trợ cả hash cũ (SHA256 không salt) để user cũ vẫn đăng nhập được;
+        /// NeedsRehash = true nghĩa là nên băm lại bằng thuật toán mới.
+        /// </summary>
+        private static (bool Valid, bool NeedsRehash) VerifyPassword(User user, string password)
         {
-            using var sha256 = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
+            if (string.IsNullOrEmpty(user.PasswordHash) || string.IsNullOrEmpty(password))
+                return (false, false);
+
+            if (IsLegacySha256Hash(user.PasswordHash))
+            {
+                var computed = SHA256.HashData(Encoding.UTF8.GetBytes(password));
+                var stored = Convert.FromBase64String(user.PasswordHash);
+                return (CryptographicOperations.FixedTimeEquals(computed, stored), true);
+            }
+
+            return _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password) switch
+            {
+                PasswordVerificationResult.Success => (true, false),
+                PasswordVerificationResult.SuccessRehashNeeded => (true, true),
+                _ => (false, false)
+            };
         }
 
-        private bool VerifyPassword(string enteredPassword, string hashedPassword)
+        // Hash cũ = Base64(SHA256) → đúng 44 ký tự, giải mã ra 32 byte. Hash Identity dài hơn nhiều.
+        private static bool IsLegacySha256Hash(string hash)
         {
-            string hashedEnteredPassword = HashPassword(enteredPassword);
-            return hashedEnteredPassword == hashedPassword;
+            if (hash.Length != 44) return false;
+            Span<byte> buffer = stackalloc byte[33];
+            return Convert.TryFromBase64String(hash, buffer, out var written) && written == 32;
         }
 
-        private string GenerateJwtToken(User user)
+        private (string Token, DateTime ExpiresAt) GenerateJwtToken(User user)
         {
             var jwtKey = _configuration["Jwt:Key"];
             var jwtIssuer = _configuration["Jwt:Issuer"];
@@ -470,10 +512,13 @@ namespace TaskHive.Service.Services.UserService
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
+            var lifetimeMinutes = int.TryParse(_configuration["Jwt:AccessTokenMinutes"], out var m) && m > 0 ? m : 1440;
+            var expiresAt = DateTime.UtcNow.AddMinutes(lifetimeMinutes);
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddHours(24),
+                Expires = expiresAt,
                 Issuer = jwtIssuer,
                 Audience = jwtAudience,
                 SigningCredentials = credentials
@@ -481,7 +526,7 @@ namespace TaskHive.Service.Services.UserService
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            return (tokenHandler.WriteToken(token), expiresAt);
         }
 
         public async Task<(EmailVerificationResponseDto response, string? errorMessage)> VerifyEmailAsync(EmailVerificationRequestDto model)
@@ -524,7 +569,7 @@ namespace TaskHive.Service.Services.UserService
                 {
                     Success = false,
                     Message = "An error occurred during email verification."
-                }, $"Email verification failed: {ex.Message}");
+                }, "Email verification failed.");
             }
         }
 
@@ -618,7 +663,7 @@ namespace TaskHive.Service.Services.UserService
                 }
 
                 var user = resetToken.User;
-                user.PasswordHash = HashPassword(model.NewPassword);
+                user.PasswordHash = HashPassword(user, model.NewPassword);
                 user.UpdatedAt = DateTime.UtcNow;
                 await _unitOfWork.Users.UpdateAsync(user);
 
@@ -626,6 +671,9 @@ namespace TaskHive.Service.Services.UserService
                 await _unitOfWork.EmailVerifications.UpdateAsync(resetToken);
 
                 await _unitOfWork.EmailVerifications.InvalidatePasswordResetTokensAsync(user.UserId);
+
+                // Đăng xuất mọi phiên cũ (kẻ đã chiếm tài khoản sẽ mất refresh token)
+                await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(user.UserId);
 
                 await _unitOfWork.SaveChangesAsync();
 
@@ -642,7 +690,7 @@ namespace TaskHive.Service.Services.UserService
                 {
                     Success = false,
                     Message = "An error occurred while resetting password."
-                }, $"Password reset failed: {ex.Message}");
+                }, "Password reset failed.");
             }
         }
 
@@ -661,17 +709,19 @@ namespace TaskHive.Service.Services.UserService
                     return (false, "User not found.");
                 }
 
+                // Tài khoản Google chưa có mật khẩu thì được đặt mật khẩu lần đầu mà không cần mật khẩu cũ
                 if (!string.IsNullOrEmpty(user.PasswordHash) &&
-                    !VerifyPassword(model.CurrentPassword, user.PasswordHash))
+                    !VerifyPassword(user, model.CurrentPassword).Valid)
                 {
                     return (false, "Current password is incorrect.");
                 }
 
-                user.PasswordHash = HashPassword(model.NewPassword);
+                user.PasswordHash = HashPassword(user, model.NewPassword);
                 user.UpdatedAt = DateTime.UtcNow;
                 await _unitOfWork.Users.UpdateAsync(user);
 
                 await _unitOfWork.EmailVerifications.InvalidatePasswordResetTokensAsync(user.UserId);
+                await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(user.UserId);
 
                 await _unitOfWork.SaveChangesAsync();
 
@@ -760,7 +810,7 @@ namespace TaskHive.Service.Services.UserService
             }
             catch (Exception ex)
             {
-                return (null, $"Failed to update freelancer profile: {ex.Message}");
+                return (null, "Failed to update freelancer profile.");
             }
         }
 
@@ -783,25 +833,11 @@ namespace TaskHive.Service.Services.UserService
                 ClientProfileResponseDto response = new();
                 _mapper.Map(client, response);
 
-                // Print all fields of client
-                Console.WriteLine("Client fields:");
-                foreach (var prop in client.GetType().GetProperties())
-                {
-                    Console.WriteLine($"{prop.Name}: {prop.GetValue(client)}");
-                }
-
-                // Print all fields of response
-                Console.WriteLine("ClientProfileResponseDto fields:");
-                foreach (var prop in response.GetType().GetProperties())
-                {
-                    Console.WriteLine($"{prop.Name}: {prop.GetValue(response)}");
-                }
-
                 return (response, null);
             }
             catch (Exception ex)
             {
-                return (null, $"Failed to update client profile: {ex.Message}");
+                return (null, "Failed to update client profile.");
             }
         }
 
@@ -830,7 +866,7 @@ namespace TaskHive.Service.Services.UserService
             }
             catch (Exception ex)
             {
-                return (null, $"Failed to update remaining slot profile: {ex.Message}");
+                return (null, "Failed to update remaining slot profile.");
             }
         }
 
@@ -857,7 +893,7 @@ namespace TaskHive.Service.Services.UserService
             }
             catch (Exception ex)
             {
-                return (null, $"Failed to add remaining slot: {ex.Message}");
+                return (null, "Failed to add remaining slot.");
             }
         }
 

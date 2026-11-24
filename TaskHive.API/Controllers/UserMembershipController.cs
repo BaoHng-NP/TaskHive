@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using TaskHive.API.Extensions;
 using TaskHive.Service.DTOs.Requests.UserMembership;
 using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.Services.UserMembershipService;
@@ -8,6 +10,7 @@ namespace TaskHive.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UserMembershipController : ControllerBase
     {
         private readonly IUserMembershipService _service;
@@ -23,10 +26,13 @@ namespace TaskHive.API.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _service.GetUserMembershipByIdAsync(id);
-            return result == null ? NotFound() : Ok(result);
+            if (result == null) return NotFound();
+            if (!User.IsSelfOrAdmin(result.UserId)) return Forbid();
+            return Ok(result);
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(List<UserMembershipResponseDto>), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetAll()
         {
@@ -34,7 +40,9 @@ namespace TaskHive.API.Controllers
             return Ok(result);
         }
 
+        // Membership của người dùng chỉ được tạo qua thanh toán; tạo/sửa/xoá tay chỉ dành cho Admin.
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserMembershipResponseDto), (int)HttpStatusCode.Created)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Add(AddUserMembershipRequestDto dto)
@@ -47,6 +55,7 @@ namespace TaskHive.API.Controllers
         }
 
         [HttpPut]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(UserMembershipResponseDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Update(UpdateUserMembershipRequestDto dto)
@@ -59,6 +68,7 @@ namespace TaskHive.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Delete(int id)
@@ -67,13 +77,15 @@ namespace TaskHive.API.Controllers
             if (error != null) return BadRequest(error);
             return NoContent();
         }
+
         [HttpGet("active/{userId}")]
         [ProducesResponseType(typeof(IEnumerable<UserMembershipResponseDto>), (int)HttpStatusCode.OK)]
         public async Task<IActionResult> GetActiveByUser([FromRoute] int userId)
         {
-            var list = await _service.GetActiveMembershipsByUserAsync(userId);
+            if (!User.IsSelfOrAdmin(userId)) return Forbid();
 
-            // Trả về 200 OK, body là mảng (có thể rỗng nếu user không có membership nào active)
+            var list = await _service.GetActiveMembershipsByUserAsync(userId);
+            // 200 OK, body là mảng (có thể rỗng nếu user không có membership nào active)
             return Ok(list);
         }
     }

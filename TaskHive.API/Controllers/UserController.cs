@@ -9,6 +9,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using TaskHive.API.Extensions;
 using TaskHive.Repository.Entities;
 using TaskHive.Repository.Repositories.JobPostRepository;
 using TaskHive.Service.DTOs.Requests.User;
@@ -25,12 +26,14 @@ namespace TaskHive.API.Controllers
         private readonly IUserService _userService;
         private readonly IMapper _mapper;
         private readonly Cloudinary _cloudinary;
+        private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserService userService, IMapper mapper, Cloudinary cloudinary)
+        public UserController(IUserService userService, IMapper mapper, Cloudinary cloudinary, ILogger<UserController> logger)
         {
             _userService = userService;
             _mapper = mapper;
             _cloudinary = cloudinary;
+            _logger = logger;
         }
 
         [HttpPost("register/freelancer")]
@@ -307,7 +310,8 @@ namespace TaskHive.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = ex.Message });
+                _logger.LogError(ex, "Failed to load user profile");
+                return StatusCode(500, new { message = "Failed to load user profile" });
             }
         }
 
@@ -331,7 +335,8 @@ namespace TaskHive.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = ex.Message });
+                _logger.LogError(ex, "Failed to load user profile");
+                return StatusCode(500, new { message = "Failed to load user profile" });
             }
         }
 
@@ -356,14 +361,17 @@ namespace TaskHive.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = ex.Message });
+                _logger.LogError(ex, "Failed to load user profile");
+                return StatusCode(500, new { message = "Failed to load user profile" });
             }
         }
 
 
         [HttpPut("freelancer/{userId}")]
+        [Authorize]
         public async Task<IActionResult> UpdateFreelancerProfile(int userId, FreelancerProfileDto model)
         {
+            if (!User.IsSelfOrAdmin(userId)) return Forbid();
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -376,9 +384,11 @@ namespace TaskHive.API.Controllers
             return Ok(freelancerProfileResponse);
         }
 
+        // Slot chỉ được thay đổi bởi server (thanh toán / ứng tuyển) hoặc Admin.
         [HttpPut("RemainingSlot/{userId}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateFreelancerProfile(int userId, int updateSlot)
+        public async Task<IActionResult> UpdateRemainingSlot(int userId, int updateSlot)
         {
             if (!ModelState.IsValid)
             {
@@ -394,8 +404,10 @@ namespace TaskHive.API.Controllers
 
 
         [HttpPut("client/{userId}")]
+        [Authorize]
         public async Task<IActionResult> UpdateClientProfile(int userId, ClientProfileDto model)
         {
+            if (!User.IsSelfOrAdmin(userId)) return Forbid();
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -408,43 +420,48 @@ namespace TaskHive.API.Controllers
             return Ok(clientProfileResponse);
         }
 
+        private const long MaxImageBytes = 5 * 1024 * 1024;
+        private static readonly string[] AllowedImageTypes = { "image/jpeg", "image/png", "image/webp", "image/gif" };
+
         [HttpPost("upload-image")]
+        [Authorize]
+        [RequestSizeLimit(MaxImageBytes + 64 * 1024)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UploadImage(IFormFile imageFile)
         {
+            if (imageFile == null || imageFile.Length == 0)
+                return BadRequest(new { message = "No image file provided" });
+            if (imageFile.Length > MaxImageBytes)
+                return BadRequest(new { message = "Image must be 5MB or smaller" });
+            if (!AllowedImageTypes.Contains(imageFile.ContentType, StringComparer.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Only JPEG, PNG, WEBP or GIF images are allowed" });
+
             try
             {
-                if (imageFile == null || imageFile.Length == 0)
-                {
-                    return BadRequest(new { message = "No image file provided" });
-                }
-
-                // ✅ Upload ảnh lên Cloudinary
+                await using var stream = imageFile.OpenReadStream();
                 var uploadParams = new ImageUploadParams
                 {
-                    File = new FileDescription(imageFile.FileName, imageFile.OpenReadStream()),
-                    PublicId = $"user-images/{Path.GetFileNameWithoutExtension(imageFile.FileName)}_{Guid.NewGuid()}",
+                    // Không dùng tên file gốc của người dùng làm PublicId
+                    File = new FileDescription("upload", stream),
+                    PublicId = $"user-images/{User.GetUserId()}_{Guid.NewGuid():N}",
                 };
 
                 var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                if (uploadResult.Error != null || uploadResult.SecureUrl == null)
+                    return BadRequest(new { message = "Image upload failed" });
 
-                return Ok(new
-                {
-                    imageUrl = uploadResult.SecureUrl.ToString()
-                });
+                return Ok(new { imageUrl = uploadResult.SecureUrl.ToString() });
             }
             catch (Exception ex)
             {
-                return BadRequest(new
-                {
-                    message = "Image upload failed",
-                    error = ex.Message
-                });
+                _logger.LogError(ex, "Image upload failed");
+                return BadRequest(new { message = "Image upload failed" });
             }
         }
 
         [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(List<AllUsersResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllUsers()
@@ -461,7 +478,8 @@ namespace TaskHive.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = $"Failed to retrieve users: {ex.Message}" });
+                _logger.LogError(ex, "Failed to retrieve users");
+                return StatusCode(500, new { message = "Failed to retrieve users" });
             }
         }
 

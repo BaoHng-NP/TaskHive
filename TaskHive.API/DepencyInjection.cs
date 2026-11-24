@@ -38,9 +38,6 @@ namespace TaskHive.API
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
-            // Add AutoMapper
-            services.AddAutoMapper(typeof(AutoMapperProfile));
-
             // Các service khác
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -67,7 +64,6 @@ namespace TaskHive.API
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserSkillRepository, UserSkillRepository>();
             services.AddScoped<IEmailVerificationRepository, EmailVerificationRepository>();
-            services.AddScoped<IUserSkillRepository, UserSkillRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IJobPostRepository, JobPostRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();

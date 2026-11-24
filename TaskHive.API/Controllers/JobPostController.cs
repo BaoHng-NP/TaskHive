@@ -4,13 +4,13 @@ using TaskHive.Service.DTOs.Requests.JobPost;
 using TaskHive.Service.DTOs.Responses;
 using TaskHive.Service.Services.JobPostService;
 using Microsoft.AspNetCore.Authorization;
+using TaskHive.API.Extensions;
 using TaskHive.Repository.Repositories.JobPostRepository;
 
 namespace TaskHive.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize] // Bỏ comment để bật xác thực nếu có dùng JWT
     public class JobPostController : ControllerBase
     {
         private readonly IJobPostService _jobPostService;
@@ -66,12 +66,17 @@ namespace TaskHive.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Client,Admin")]
         [ProducesResponseType(typeof(JobPostResponseDto), (int)HttpStatusCode.Created)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> AddJobPost([FromBody] AddJobPostRequestDto request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            // Client luôn đăng job dưới tên chính mình; chỉ Admin được chỉ định EmployerId khác.
+            if (!User.IsAdmin())
+                request.EmployerId = User.GetUserId() ?? 0;
 
             var (jobPost, error) = await _jobPostService.AddJobPostAsync(request);
 
@@ -85,10 +90,15 @@ namespace TaskHive.API.Controllers
         [ProducesResponseType(typeof(JobPostResponseDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [Authorize]
         public async Task<IActionResult> UpdateJobPost([FromBody] UpdateJobPostRequestDto request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            var existing = await _jobPostService.GetJobPostByIdAsync(request.JobPostId);
+            if (existing == null) return NotFound("Job post not found");
+            if (!User.IsSelfOrAdmin(existing.EmployerId)) return Forbid();
 
             var (updatedJobPost, error) = await _jobPostService.UpdateJobPostAsync(request);
 
@@ -101,8 +111,13 @@ namespace TaskHive.API.Controllers
         [HttpDelete("{jobPostId}")]
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.NotFound)]
+        [Authorize]
         public async Task<IActionResult> DeleteJobPost(int jobPostId)
         {
+            var existing = await _jobPostService.GetJobPostByIdAsync(jobPostId);
+            if (existing == null) return NotFound("Job post not found");
+            if (!User.IsSelfOrAdmin(existing.EmployerId)) return Forbid();
+
             var error = await _jobPostService.DeleteJobPostAsync(jobPostId);
             return error == null ? NoContent() : NotFound(error);
         }

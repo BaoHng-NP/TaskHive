@@ -87,9 +87,9 @@ namespace TaskHive.Service.Services.BlogPostService
             try
             {
                 var blogPost = await _unitOfWork.BlogPosts.GetByIdAsync(request.Id);
-                if (blogPost == null)
+                if (blogPost == null || blogPost.AuthorId != authorId)
                 {
-                    return null;
+                    return null; // không tồn tại hoặc không phải tác giả
                 }
                 _mapper.Map(request, blogPost);
                 await _unitOfWork.BlogPosts.UpdateAsync(blogPost);
