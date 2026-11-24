@@ -1,4 +1,5 @@
 ﻿// TaskHive.API/Controllers/CategoryController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using TaskHive.Service.DTOs.Requests.Category;
@@ -36,6 +37,7 @@ namespace TaskHive.API.Controllers
             return Ok(categories);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ProducesResponseType(typeof(CategoryResponseDto), (int)HttpStatusCode.Created)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
@@ -49,6 +51,7 @@ namespace TaskHive.API.Controllers
             return CreatedAtAction(nameof(GetCategoryById), new { categoryId = category?.CategoryId }, category);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut]
         [ProducesResponseType(typeof(CategoryResponseDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
@@ -64,6 +67,7 @@ namespace TaskHive.API.Controllers
             return Ok(category);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{categoryId}")]
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]

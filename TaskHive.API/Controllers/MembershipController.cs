@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Net;
 using TaskHive.Service.DTOs.Requests.Membership;
 using TaskHive.Service.DTOs.Responses;
@@ -34,6 +35,7 @@ namespace TaskHive.API.Controllers
             return Ok(memberships);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ProducesResponseType(typeof(MembershipResponseDto), (int)HttpStatusCode.Created)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
@@ -47,6 +49,7 @@ namespace TaskHive.API.Controllers
             return CreatedAtAction(nameof(GetMembershipById), new { membershipId = membership?.MembershipId }, membership);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut]
         [ProducesResponseType(typeof(MembershipResponseDto), (int)HttpStatusCode.OK)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]
@@ -62,6 +65,7 @@ namespace TaskHive.API.Controllers
             return Ok(membership);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{membershipId}")]
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [ProducesResponseType(typeof(string), (int)HttpStatusCode.BadRequest)]

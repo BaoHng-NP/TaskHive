@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Net;
 using TaskHive.Service.DTOs.Requests.SlotPurchase;
 using TaskHive.Service.DTOs.Responses;
@@ -31,6 +32,7 @@ namespace TaskHive.API.Controllers
             return Ok(await _service.GetAllAsync());
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Add(AddSlotPurchaseRequestDto dto)
         {
@@ -39,6 +41,7 @@ namespace TaskHive.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result!.SlotPurchaseId }, result);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut]
         public async Task<IActionResult> Update(UpdateSlotPurchaseRequestDto dto)
         {
@@ -47,6 +50,7 @@ namespace TaskHive.API.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

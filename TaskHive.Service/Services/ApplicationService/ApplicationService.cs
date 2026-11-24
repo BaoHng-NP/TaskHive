@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,27 +45,67 @@ namespace TaskHive.Service.Services.ApplicationService
             return _mapper.Map<List<ApplicationResponseDto>>(applications);
         }
 
-        public async Task<(ApplicationResponseDto? application, string? error)> AddApplicationAsync(AddApplicationRequestDto dto)
+        private const string InitialStatus = "Pending";
+        private const long MaxCvBytes = 10 * 1024 * 1024;
+        private static readonly string[] AllowedCvExtensions = { ".pdf", ".doc", ".docx" };
+
+        private static string? ValidateCv(IFormFile? file)
         {
-            var application = _mapper.Map<Application>(dto);
+            if (file == null) return null;
+            if (file.Length == 0 || file.Length > MaxCvBytes) return "CV file must be between 1 byte and 10MB";
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            return AllowedCvExtensions.Contains(ext) ? null : "CV must be a PDF, DOC or DOCX file";
+        }
 
-            // 1. Upload CV nếu client gửi lên
-            if (dto.CVFile != null)
+        private async Task<string?> UploadCvAsync(IFormFile file, int freelancerId)
+        {
+            await using var stream = file.OpenReadStream();
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var uploadParams = new RawUploadParams
             {
-                var uploadParams = new RawUploadParams
-                {
-                    File = new FileDescription(dto.CVFile.FileName, dto.CVFile.OpenReadStream()),
-                    PublicId = $"cvs/{Path.GetFileNameWithoutExtension(dto.CVFile.FileName)}_{Guid.NewGuid()}"
-                };
-                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-                application.CVFile = uploadResult.SecureUrl.ToString();
-            }
+                File = new FileDescription($"cv{ext}", stream),
+                // Không dùng tên file gốc của người dùng làm PublicId
+                PublicId = $"cvs/{freelancerId}_{Guid.NewGuid():N}{ext}"
+            };
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+            return uploadResult.Error == null ? uploadResult.SecureUrl?.ToString() : null;
+        }
 
-            // 2. Các trường mặc định
+        public async Task<(ApplicationResponseDto? application, string? error)> AddApplicationAsync(AddApplicationRequestDto dto, int freelancerId)
+        {
+            var cvError = ValidateCv(dto.CVFile);
+            if (cvError != null) return (null, cvError);
+
+            var jobPost = await _unitOfWork.JobPosts.GetJobPostByIdAsync(dto.JobPostId);
+            if (jobPost == null) return (null, "Job post not found");
+
+            var freelancer = await _unitOfWork.Users.GetFreelancerByIdAsync(freelancerId);
+            if (freelancer == null) return (null, "Only freelancers can apply");
+
+            if (await _unitOfWork.Applications.GetByJobPostAndFreelancerAsync(dto.JobPostId, freelancerId) != null)
+                return (null, "You have already applied to this job");
+
+            if (freelancer.RemainingSlots <= 0)
+                return (null, "Not enough slots. Please buy more slots or a membership.");
+
+            var application = _mapper.Map<Application>(dto);
+            application.FreelancerId = freelancerId;   // luôn lấy từ token, bỏ qua giá trị client gửi
+            application.Status = InitialStatus;        // freelancer không được tự đặt trạng thái
             application.AppliedAt = DateTime.UtcNow;
+            application.UpdatedAt = DateTime.UtcNow;
             application.IsDeleted = false;
 
-            // 3. Lưu
+            if (dto.CVFile != null)
+            {
+                var url = await UploadCvAsync(dto.CVFile, freelancerId);
+                if (url == null) return (null, "CV upload failed");
+                application.CVFile = url;
+            }
+
+            // Trừ slot trên server; được lưu cùng một SaveChanges với application.
+            freelancer.RemainingSlots -= 1;
+            freelancer.UpdatedAt = DateTime.UtcNow;
+
             var success = await _unitOfWork.Applications.AddApplicationAsync(application);
             if (!success)
                 return (null, "Thêm application thất bại");
@@ -73,25 +114,31 @@ namespace TaskHive.Service.Services.ApplicationService
             return (_mapper.Map<ApplicationResponseDto>(result), null);
         }
 
-        public async Task<(ApplicationResponseDto? application, string? error)> UpdateApplicationAsync(UpdateApplicationRequestDto dto)
+        public async Task<(ApplicationResponseDto? application, string? error)> UpdateApplicationAsync(
+            UpdateApplicationRequestDto dto, bool canEditContent, bool canEditStatus)
         {
             var existing = await _unitOfWork.Applications.GetApplicationByIdAsync(dto.ApplicationId);
             if (existing == null)
                 return (null, "Application không tồn tại");
 
-            // Upload CV mới nếu client gửi
-            if (dto.CVFile != null)
+            if (canEditContent)
             {
-                var uploadParams = new RawUploadParams
+                var cvError = ValidateCv(dto.CVFile);
+                if (cvError != null) return (null, cvError);
+
+                if (dto.CVFile != null)
                 {
-                    File = new FileDescription(dto.CVFile.FileName, dto.CVFile.OpenReadStream()),
-                    PublicId = $"cvs/{Path.GetFileNameWithoutExtension(dto.CVFile.FileName)}_{Guid.NewGuid()}"
-                };
-                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-                existing.CVFile = uploadResult.SecureUrl.ToString();
+                    var url = await UploadCvAsync(dto.CVFile, existing.FreelancerId);
+                    if (url == null) return (null, "CV upload failed");
+                    existing.CVFile = url;
+                }
+                if (dto.CoverLetter != null) existing.CoverLetter = dto.CoverLetter;
+                if (dto.BidAmount != null) existing.BidAmount = dto.BidAmount;
             }
 
-            _mapper.Map(dto, existing);
+            if (canEditStatus && !string.IsNullOrWhiteSpace(dto.Status))
+                existing.Status = dto.Status;
+
             existing.UpdatedAt = DateTime.UtcNow;
 
             var updated = await _unitOfWork.Applications.UpdateApplicationAsync(existing);
@@ -109,6 +156,13 @@ namespace TaskHive.Service.Services.ApplicationService
 
             var success = await _unitOfWork.Applications.DeleteApplicationAsync(applicationId);
             return success ? null : "Failed to delete application";
+        }
+
+        public async Task<(int FreelancerId, int EmployerId)?> GetParticipantsAsync(int applicationId)
+        {
+            var application = await _unitOfWork.Applications.GetApplicationByIdAsync(applicationId);
+            if (application == null || application.IsDeleted) return null;
+            return (application.FreelancerId, application.JobPost.EmployerId);
         }
     }
 }

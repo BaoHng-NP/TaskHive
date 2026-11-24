@@ -17,13 +17,28 @@ using TaskHive.Service.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1) Bind & register PayOS (unchanged) ---
+// --- 0) Fail fast nếu thiếu cấu hình bắt buộc (secrets nằm ở user-secrets / biến môi trường) ---
+string RequireConfig(string key)
+{
+    var value = builder.Configuration[key];
+    if (string.IsNullOrWhiteSpace(value))
+        throw new InvalidOperationException(
+            $"Missing configuration '{key}'. Set it via 'dotnet user-secrets set \"{key}\" <value>' (dev) " +
+            $"or environment variable '{key.Replace(":", "__")}' (production).");
+    return value;
+}
+
+RequireConfig("ConnectionStrings:DefaultConnection");
+var jwtKey = RequireConfig("Jwt:Key");
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("Jwt:Key must be at least 32 bytes.");
+
+// --- 1) Bind & register PayOS ---
 builder.Services.Configure<PayOsSettings>(builder.Configuration.GetSection("PayOs"));
 builder.Services.AddSingleton<PayOS>(sp => {
     var s = sp.GetRequiredService<IOptions<PayOsSettings>>().Value;
     return new PayOS(s.ClientId, s.ApiKey, s.ChecksumKey);
 });
-builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // --- 2) Bind & register Cloudinary (unchanged) ---
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
@@ -107,8 +122,8 @@ builder.Services.AddAuthentication(opts =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ClockSkew = TimeSpan.FromMinutes(1)
     };
     opts.Events = new JwtBearerEvents
     {

@@ -55,7 +55,7 @@ namespace TaskHive.API.Hubs
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var http = Context.GetHttpContext();
-            if (int.TryParse(http.Request.Query["conversationId"], out var convId))
+            if (http != null && int.TryParse(http.Request.Query["conversationId"], out var convId))
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, convId.ToString());
                 _logger.LogInformation("Connection {ConnectionId} left group {Group}", Context.ConnectionId, convId);
@@ -86,6 +86,10 @@ namespace TaskHive.API.Hubs
                 var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var senderId))
                     throw new HubException("User not authenticated");
+
+                // Không được gửi vào hội thoại mà mình không phải thành viên
+                if (!await _chatService.IsMemberAsync(conversationId, senderId))
+                    throw new HubException("Not authorized");
 
                 // Chuẩn bị DTO
                 var dto = new SendMessageDto
